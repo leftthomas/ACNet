@@ -43,6 +43,22 @@ class DomainDataset(Dataset):
         self.generated_images.sort()
         self.transform = get_transform(data_name, split)
 
+        self.domains, categories, category_id = [], {}, 0
+        for image_name in self.original_images:
+            domain = image_name.split('/')[-2]
+            if domain == 'A':
+                self.domains.append(0)
+            else:
+                self.domains.append(1)
+            category = image_name.split('/')[-1].split('.')[0].split('_')[0]
+            if category not in categories:
+                categories[category] = category_id
+                category_id += 1
+        self.labels = []
+        for image_name in self.original_images:
+            category = image_name.split('/')[-1].split('.')[0].split('_')[0]
+            self.labels.append(categories[category])
+
     def __getitem__(self, index):
         original_img_name = self.original_images[index]
         original_img = Image.open(original_img_name)
@@ -60,10 +76,12 @@ class DomainDataset(Dataset):
 
 
 def recall(vectors, labels, domains, ranks):
-    a_vectors = vectors[domains]
-    b_vectors = vectors[~domains]
-    a_labels = labels[domains]
-    b_labels = labels[~domains]
+    domains = torch.as_tensor(domains, dtype=torch.bool, device=vectors.device)
+    labels = torch.as_tensor(labels, dtype=torch.long, device=vectors.device)
+    a_vectors = vectors[~domains]
+    b_vectors = vectors[domains]
+    a_labels = labels[~domains]
+    b_labels = labels[domains]
     # domain a ---> domain b
     sim_a = a_vectors.mm(b_vectors.t())
     idx_a = sim_a.topk(k=ranks[-1], dim=-1, largest=True)[1]
