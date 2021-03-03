@@ -16,7 +16,8 @@ conda install pytorch=1.7.0 torchvision torchaudio cudatoolkit=11.0 -c pytorch
 ## Dataset
 
 [CUFSF](http://mmlab.ie.cuhk.edu.hk/archive/cufsf/),
-[Cityscapes FoggyDBF](https://www.cityscapes-dataset.com) and [Synthia Seqs](https://synthia-dataset.net/downloads/)
+[ShoeV2](https://www.eecs.qmul.ac.uk/~qian/Project_cvpr16.html)
+and [ChairV2](https://www.eecs.qmul.ac.uk/~qian/Project_cvpr16.html)
 datasets are used in this repo, you could download these datasets from official websites, or download them from
 [MEGA](https://mega.nz/folder/kx53iYoL#u_Zc6ogPokaTRVM6qYn3ZA). The data should be rearranged, please refer the paper to
 acquire the details of `train/val` split. The data directory structure is shown as follows:
@@ -37,10 +38,10 @@ acquire the details of `train/val` split. The data directory structure is shown 
    ├── generated (generated images)
        same structure as original
        ...
-├──cityscapes
+├──shoe
    same structure as cufsf
    ...
-├──synthia
+├──chair
    same structure as cufsf 
    ... 
 ```
@@ -48,10 +49,10 @@ acquire the details of `train/val` split. The data directory structure is shown 
 ## Usage
 
 ```
-python main.py --data_name synthia --method_name simclr
+python main.py --data_name shoe --method_name simclr
 optional arguments:
 --data_root                   Datasets root path [default value is 'data']
---data_name                   Dataset name [default value is 'cufsf'](choices=['cufsf', 'cityscapes', 'synthia'])
+--data_name                   Dataset name [default value is 'cufsf'](choices=['cufsf', 'shoe', 'chair'])
 --method_name                 Method name [default value is 'daco'](choices=['daco', 'simclr'])
 --proj_dim                    Projected feature dim for computing loss [default value is 128]
 --temperature                 Temperature used in softmax [default value is 0.1]
@@ -127,7 +128,7 @@ and `weight decay` is `1e-6`. all the hyper-parameters are the default values.
 </tbody>
 </table>
 
-### Foggy Cityscapes
+### ShoeV2
 
 <table>
 <thead>
@@ -189,7 +190,7 @@ and `weight decay` is `1e-6`. all the hyper-parameters are the default values.
 </tbody>
 </table>
 
-### Synthia Seqs
+### ChairV2
 
 <table>
 <thead>
@@ -257,13 +258,13 @@ and `weight decay` is `1e-6`. all the hyper-parameters are the default values.
 
 ![tokyo](result/cufsf.png)
 
-### Foggy Cityscapes
+### ShoeV2
 
-![cityscapes](result/cityscapes.png)
+![cityscapes](result/shoe.png)
 
-### Synthia Seqs
+### ChairV2
 
-![synthia](result/synthia.png)
+![synthia](result/chair.png)
 
 ### T-SNE
 

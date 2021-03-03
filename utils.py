@@ -8,8 +8,8 @@ from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 
 normalizer = {'cufsf': [(0.537, 0.537, 0.537), (0.193, 0.193, 0.193)],
-              'cityscapes': [(0.401, 0.437, 0.401), (0.186, 0.187, 0.187)],
-              'synthia': [(0.244, 0.221, 0.177), (0.193, 0.174, 0.143)]}
+              'shoe': [(0.195, 0.191, 0.189), (0.062, 0.067, 0.070)],
+              'chair': [(0.204, 0.197, 0.195), (0.051, 0.059, 0.063)]}
 
 
 def get_transform(data_name, split='train'):
@@ -34,24 +34,24 @@ class DomainDataset(Dataset):
 
         self.method_name = method_name
 
-        original_path = os.path.join(data_root, data_name, 'original', split, '*', '*.jpg')
+        original_path = os.path.join(data_root, data_name, 'original', split, '*', '*.png')
         self.original_images = glob.glob(original_path)
         self.original_images.sort()
 
-        generated_path = os.path.join(data_root, data_name, 'generated', split, '*', '*.jpg')
+        generated_path = os.path.join(data_root, data_name, 'generated', split, '*', '*.png')
         self.generated_images = glob.glob(generated_path)
         self.generated_images.sort()
         self.transform = get_transform(data_name, split)
 
     def __getitem__(self, index):
         original_img_name = self.original_images[index]
-        original_img = Image.open(original_img_name).convert('RGB')
+        original_img = Image.open(original_img_name)
         img_1 = self.transform(original_img)
         if self.method_name != 'daco':
             img_2 = self.transform(original_img)
         else:
             generated_img_name = self.generated_images[index]
-            generated_img = Image.open(generated_img_name).convert('RGB')
+            generated_img = Image.open(generated_img_name)
             img_2 = self.transform(generated_img)
         return img_1, img_2
 
@@ -59,13 +59,11 @@ class DomainDataset(Dataset):
         return len(self.original_images)
 
 
-def recall(vectors, ranks):
-    labels = torch.arange(len(vectors) // 2, device=vectors.device)
-    labels = torch.cat((labels, labels), dim=0)
-    a_vectors = vectors[:len(vectors) // 2]
-    b_vectors = vectors[len(vectors) // 2:]
-    a_labels = labels[:len(vectors) // 2]
-    b_labels = labels[len(vectors) // 2:]
+def recall(vectors, labels, domains, ranks):
+    a_vectors = vectors[domains]
+    b_vectors = vectors[~domains]
+    a_labels = labels[domains]
+    b_labels = labels[~domains]
     # domain a ---> domain b
     sim_a = a_vectors.mm(b_vectors.t())
     idx_a = sim_a.topk(k=ranks[-1], dim=-1, largest=True)[1]

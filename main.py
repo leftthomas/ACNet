@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.backends import cudnn
-from torch.nn import DataParallel
 from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
@@ -49,7 +48,9 @@ def val(net, data_loader):
         for data, _ in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
             vectors.append(net(data.cuda())[0])
         vectors = torch.cat(vectors, dim=0)
-        acc_a, acc_b, acc = recall(vectors, ranks)
+        labels = data_loader.dataset.labels
+        domains = data_loader.dataset.domains
+        acc_a, acc_b, acc = recall(vectors, labels, domains, ranks)
         precise = (acc_a[0] + acc_b[0] + acc[0]) / 3
         desc = 'Val Epoch: [{}/{}] '.format(epoch, epochs)
         for i, r in enumerate(ranks):
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Model')
     # common args
     parser.add_argument('--data_root', default='data', type=str, help='Datasets root path')
-    parser.add_argument('--data_name', default='cufsf', type=str, choices=['cufsf', 'cityscapes', 'synthia'],
+    parser.add_argument('--data_name', default='cufsf', type=str, choices=['cufsf', 'shoe', 'chair'],
                         help='Dataset name')
     parser.add_argument('--method_name', default='daco', type=str, choices=['daco', 'simclr'], help='Method name')
     parser.add_argument('--proj_dim', default=128, type=int, help='Projected feature dim for computing loss')
