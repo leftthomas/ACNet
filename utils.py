@@ -63,13 +63,11 @@ class DomainDataset(Dataset):
         original_img_name = self.original_images[index]
         original_img = Image.open(original_img_name)
         img_1 = self.transform(original_img)
-        if self.method_name != 'daco':
-            img_2 = self.transform(original_img)
-        else:
-            generated_img_name = self.generated_images[index]
-            generated_img = Image.open(generated_img_name)
-            img_2 = self.transform(generated_img)
-        return img_1, img_2
+        img_2 = self.transform(original_img)
+        generated_img_name = self.generated_images[index]
+        generated_img = Image.open(generated_img_name)
+        img_3 = self.transform(generated_img)
+        return img_1, img_2, img_3
 
     def __len__(self):
         return len(self.original_images)

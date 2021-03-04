@@ -46,3 +46,15 @@ class SimCLRLoss(nn.Module):
         pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
         loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
         return loss
+
+
+class DaCoLoss(nn.Module):
+    def __init__(self, temperature):
+        super(DaCoLoss, self).__init__()
+        self.simclr_loss = SimCLRLoss(temperature)
+
+    def forward(self, proj_1, proj_2, proj_3):
+        within_modal = self.simclr_loss(proj_1, proj_2)
+        cross_modal = self.simclr_loss(proj_1, proj_3)
+        loss = within_modal + cross_modal
+        return loss

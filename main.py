@@ -9,7 +9,7 @@ from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Model, SimCLRLoss
+from model import Model, SimCLRLoss, DaCoLoss
 from utils import DomainDataset, recall
 
 # for reproducibility
@@ -23,12 +23,14 @@ cudnn.benchmark = False
 def train(net, data_loader, train_optimizer):
     net.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
-    for img_1, img_2 in train_bar:
-
-        img_1, img_2 = img_1.cuda(), img_2.cuda()
-        _, proj_1 = net(img_1)
-        _, proj_2 = net(img_2)
-        loss = loss_criterion(proj_1, proj_2)
+    for img_1, img_2, img_3 in train_bar:
+        _, proj_1 = net(img_1.cuda())
+        _, proj_2 = net(img_2.cuda())
+        if method_name == 'simclr':
+            loss = loss_criterion(proj_1, proj_2)
+        else:
+            _, proj_3 = net(img_3.cuda())
+            loss = loss_criterion(proj_1, proj_2, proj_3)
         train_optimizer.zero_grad()
         loss.backward()
         train_optimizer.step()
@@ -45,7 +47,7 @@ def val(net, data_loader):
     net.eval()
     vectors = []
     with torch.no_grad():
-        for data, _ in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
+        for data, _, _ in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
             vectors.append(net(data.cuda())[0])
         vectors = torch.cat(vectors, dim=0)
         labels = data_loader.dataset.labels
@@ -96,7 +98,10 @@ if __name__ == '__main__':
     model = Model(proj_dim).cuda()
     # optimizer config
     optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
-    loss_criterion = SimCLRLoss(temperature)
+    if method_name == 'simclr':
+        loss_criterion = SimCLRLoss(temperature)
+    else:
+        loss_criterion = DaCoLoss(temperature)
 
     # training loop
     results = {'train_loss': [], 'val_precise': []}
