@@ -1,25 +1,20 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models.resnet import resnet50
+from torchvision.models import vgg16
 
 
 class Model(nn.Module):
     def __init__(self, proj_dim):
         super(Model, self).__init__()
-
-        self.f = []
-        for name, module in resnet50().named_children():
-            if not isinstance(module, nn.Linear):
-                self.f.append(module)
         # encoder
-        self.f = nn.Sequential(*self.f)
+        self.f = vgg16(pretrained=True).features
         # projection head
-        self.g = nn.Sequential(nn.Linear(2048, 512, bias=False), nn.BatchNorm1d(512),
+        self.g = nn.Sequential(nn.Linear(512, 512, bias=False), nn.BatchNorm1d(512),
                                nn.ReLU(inplace=True), nn.Linear(512, proj_dim, bias=True))
 
     def forward(self, x):
-        x = self.f(x)
+        x = F.adaptive_avg_pool2d(self.f(x), output_size=(1, 1))
         feature = torch.flatten(x, start_dim=1)
         proj = self.g(feature)
         return F.normalize(feature, dim=-1), F.normalize(proj, dim=-1)
@@ -45,16 +40,4 @@ class SimCLRLoss(nn.Module):
         # [2*B]
         pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
         loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
-        return loss
-
-
-class DaCoLoss(nn.Module):
-    def __init__(self, temperature):
-        super(DaCoLoss, self).__init__()
-        self.simclr_loss = SimCLRLoss(temperature)
-
-    def forward(self, proj_1, proj_2, proj_3):
-        within_modal = self.simclr_loss(proj_1, proj_2)
-        cross_modal = self.simclr_loss(proj_1, proj_3)
-        loss = within_modal + cross_modal
         return loss

@@ -260,11 +260,11 @@ and `weight decay` is `1e-6`. all the hyper-parameters are the default values.
 
 ### ShoeV2
 
-![cityscapes](result/shoe.png)
+![cityscapes](result/tuberlin.png)
 
 ### ChairV2
 
-![synthia](result/chair.png)
+![synthia](result/sketchy.png)
 
 ### T-SNE
 
