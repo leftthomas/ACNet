@@ -18,7 +18,7 @@ parser.add_argument('--data_name', default='sketchy', type=str, choices=['sketch
 args = parser.parse_args()
 data_root, data_name = args.data_root, args.data_name
 train_data = DomainDataset(data_root, data_name, 'other', split='train')
-data_loader = DataLoader(train_data, batch_size=32, num_workers=8)
+data_loader = DataLoader(train_data, batch_size=128, num_workers=16)
 # using VGG16 pretrained on ImageNet to obtain feature vectors
 model = Model(128).cuda()
 model.eval()

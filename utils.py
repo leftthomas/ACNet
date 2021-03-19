@@ -6,8 +6,8 @@ from PIL import Image
 from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 
-normalizer = {'sketchy': [(0.718, 0.705, 0.679), (0.206, 0.203, 0.203)],
-              'tuberlin': [(0.493, 0.524, 0.545), (0.222, 0.219, 0.222)]}
+normalizer = {'sketchy': [(0.717, 0.705, 0.678), (0.204, 0.202, 0.202)],
+              'tuberlin': [(0.496, 0.527, 0.548), (0.222, 0.218, 0.220)]}
 
 
 def get_transform(data_name, split='train'):
@@ -31,7 +31,7 @@ class DomainDataset(Dataset):
         super(DomainDataset, self).__init__()
 
         self.method_name = method_name
-        self.images = sorted(glob.glob(os.path.join(data_root, data_name, 'original', split, '*', '*', '*.png')))
+        self.images = sorted(glob.glob(os.path.join(data_root, data_name, 'original', split, '*', '*', '*.jpg')))
         self.transform = get_transform(data_name, split)
 
         self.labels, self.domains, self.classes = [], [], {}
