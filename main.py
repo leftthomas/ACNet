@@ -70,21 +70,20 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Model')
     # common args
     parser.add_argument('--data_root', default='data', type=str, help='Datasets root path')
-    parser.add_argument('--data_name', default='cufsf', type=str, choices=['cufsf', 'shoe', 'chair'],
+    parser.add_argument('--data_name', default='sketchy', type=str, choices=['sketchy', 'tuberlin'],
                         help='Dataset name')
-    parser.add_argument('--method_name', default='daco', type=str, choices=['daco', 'simclr'], help='Method name')
+    parser.add_argument('--method_name', default='gbd', type=str, choices=['gbd', 'simclr'], help='Method name')
     parser.add_argument('--proj_dim', default=128, type=int, help='Projected feature dim for computing loss')
     parser.add_argument('--temperature', default=0.1, type=float, help='Temperature used in softmax')
     parser.add_argument('--batch_size', default=32, type=int, help='Number of images in each mini-batch')
-    parser.add_argument('--iters', default=40000, type=int, help='Number of bp over the model to train')
-    parser.add_argument('--ranks', default='1,2,4,8', type=str, help='Selected recall')
+    parser.add_argument('--iters', default=10000, type=int, help='Number of bp over the model to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     # args parse
     args = parser.parse_args()
     data_root, data_name, method_name = args.data_root, args.data_name, args.method_name
     proj_dim, temperature, batch_size, iters = args.proj_dim, args.temperature, args.batch_size, args.iters
-    save_root, ranks = args.save_root, [int(k) for k in args.ranks.split(',')]
+    save_root = args.save_root
 
     # data prepare
     train_data = DomainDataset(data_root, data_name, method_name, split='train')
@@ -97,11 +96,8 @@ if __name__ == '__main__':
     # model setup
     model = Model(proj_dim).cuda()
     # optimizer config
-    optimizer = Adam(model.parameters(), lr=1e-3, weight_decay=1e-6)
-    if method_name == 'simclr':
-        loss_criterion = SimCLRLoss(temperature)
-    else:
-        loss_criterion = DaCoLoss(temperature)
+    optimizer = Adam(model.parameters(), lr=1e-4, betas=(0.5, 0.99))
+    loss_criterion = SimCLRLoss(temperature)
 
     # training loop
     results = {'train_loss': [], 'val_precise': []}
