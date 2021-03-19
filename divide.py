@@ -18,7 +18,7 @@ parser.add_argument('--data_name', default='sketchy', type=str, choices=['sketch
 args = parser.parse_args()
 data_root, data_name = args.data_root, args.data_name
 train_data = DomainDataset(data_root, data_name, 'other', split='train')
-data_loader = DataLoader(train_data, batch_size=1)
+data_loader = DataLoader(train_data, batch_size=32, num_workers=8)
 # using VGG16 pretrained on ImageNet to obtain feature vectors
 model = Model(128).cuda()
 model.eval()
@@ -27,16 +27,18 @@ vectors, img_names = [], []
 with torch.no_grad():
     for data, _, _, _, img_name in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
         vectors.append(model(data.cuda())[0])
-        img_names.append(img_name)
+        img_names += img_name
     vectors = torch.cat(vectors, dim=0)
 
+print('running k-means')
 vectors = vectors.cpu().numpy()
 # using k-means to cluster photo and sketch
 kmeans = KMeans(n_clusters=2, random_state=0)
 kmeans.fit(vectors)
 labels = kmeans.predict(vectors)
+print('k-means done')
 
-for img_name, label in zip(img_names, labels):
+for img_name, label in tqdm(zip(img_names, labels), total=len(img_names), desc='Data dividing', dynamic_ncols=True):
     domain = 'A' if label else 'B'
     dst = img_name.replace('original', domain)
     if not os.path.exists(os.path.dirname(dst)):
