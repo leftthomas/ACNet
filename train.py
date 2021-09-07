@@ -27,7 +27,7 @@ def train(net, data_loader, train_optimizer):
     net.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
     for img, domain, label, img_name in train_bar:
-        _, _, _, proj = net(img.cuda())
+        proj = net(img.cuda())
         loss = loss_criterion(proj, label.cuda())
         train_optimizer.zero_grad()
         loss.backward()
@@ -45,7 +45,7 @@ def val(net, data_loader):
     vectors, domains, labels = [], [], []
     with torch.no_grad():
         for img, domain, label, img_name in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
-            _, _, _, proj = net(img.cuda())
+            proj = net(img.cuda())
             vectors.append(proj.cpu())
             domains.append(domain)
             labels.append(label)
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--backbone_type', default='resnet50', type=str, choices=['resnet50', 'vgg16'],
                         help='Backbone type')
     parser.add_argument('--proj_dim', default=512, type=int, help='Projected embedding dim')
-    parser.add_argument('--batch_size', default=48, type=int, help='Number of images in each mini-batch')
+    parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
     parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
     parser.add_argument('--warmup', default=1, type=int, help='Number of warmups over the model to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     for epoch in range(1, epochs + 1):
 
         # warmup, not update the parameters of backbone
-        for param in model.backbone.parameters():
+        for param in model.extractor.parameters():
             param.requires_grad = False if epoch <= warmup else True
 
         train_loss = train(model, train_loader, optimizer)
