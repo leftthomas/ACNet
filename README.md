@@ -1,6 +1,7 @@
-# Sketch
+# MSTP
 
-A PyTorch implementation of Sketch based on ACMMM 2021 paper [Sketch-based Image Retreval]().
+A PyTorch implementation of MSTP based on CVPR 2022 paper
+[Map Sketch to Photo for Zero-Shot Sketch-Based Image Retrieval]().
 
 ![Network Architecture](result/structure.png)
 
@@ -10,262 +11,182 @@ A PyTorch implementation of Sketch based on ACMMM 2021 paper [Sketch-based Image
 - [PyTorch](https://pytorch.org)
 
 ```
-conda install pytorch=1.7.0 torchvision torchaudio cudatoolkit=11.0 -c pytorch
+conda install pytorch=1.9.0 torchvision cudatoolkit -c pytorch
+```
+
+- [Pytorch Metric Learning](https://kevinmusgrave.github.io/pytorch-metric-learning/)
+
+```
+pip install pytorch-metric-learning
+```
+
+- [Faiss](https://faiss.ai)
+
+```
+conda install -c pytorch faiss-cpu
 ```
 
 ## Dataset
 
-[CUFSF](http://mmlab.ie.cuhk.edu.hk/archive/cufsf/),
-[ShoeV2](https://www.eecs.qmul.ac.uk/~qian/Project_cvpr16.html)
-and [ChairV2](https://www.eecs.qmul.ac.uk/~qian/Project_cvpr16.html)
-datasets are used in this repo, you could download these datasets from official websites, or download them from
-[MEGA](https://mega.nz/folder/kx53iYoL#u_Zc6ogPokaTRVM6qYn3ZA). The data should be rearranged, please refer the paper to
-acquire the details of `train/val` split. The data directory structure is shown as follows:
+[Sketchy Extended](http://sketchy.eye.gatech.edu) and
+[TU-Berlin Extended](http://cybertron.cg.tu-berlin.de/eitz/projects/classifysketch/) datasets are used in this repo, you
+could download these datasets from official websites, or download them from
+[MEGA](https://mega.nz/folder/IooQkZRJ#jLYcZ5PFK9jzxLN4FuOopg). The data directory structure is shown as follows:
 
  ```
-├──cufsf
-   ├── original (orignal images)
-       ├── train
-           ├── A (sketch images)
-               ├── A_1.jpg
+├──sketchy
+   ├── train
+       ├── sketch
+           ├── airplane
+               ├── n02691156_58-1.jpg
                └── ...
-           ├── B (photo images)
-               ├── B_1.jpg
-               └── ...
-       ├── val
-          same structure as train
-          ...
-   ├── generated (generated images)
-       same structure as original
-       ...
-├──shoe
-   same structure as cufsf
+           ...
+       ├── photo
+           same structure as sketch
+   ├── val
+      same structure as train
+      ...
+├──tuberlin
+   same structure as sketchy
    ...
-├──chair
-   same structure as cufsf 
-   ... 
 ```
 
 ## Usage
 
+### Train Model
+
 ```
-python main.py --data_name shoe --method_name simclr
+python train.py --data_name tuberlin
 optional arguments:
---data_root                   Datasets root path [default value is 'data']
---data_name                   Dataset name [default value is 'cufsf'](choices=['cufsf', 'shoe', 'chair'])
---method_name                 Method name [default value is 'daco'](choices=['daco', 'simclr'])
---proj_dim                    Projected feature dim for computing loss [default value is 128]
---temperature                 Temperature used in softmax [default value is 0.1]
---batch_size                  Number of images in each mini-batch [default value is 32]
---iters                       Number of bp over the model to train [default value is 40000]
---ranks                       Selected recall [default value is '1,2,4,8']
+--data_root                   Datasets root path [default value is '/data']
+--data_name                   Dataset name [default value is 'sketchy'](choices=['sketchy', 'tuberlin'])
+--backbone_type               Backbone type [default value is 'resnet50'](choices=['resnet50', 'vgg16'])
+--proj_dim                    Projected embedding dim [default value is 512]
+--batch_size                  Number of images in each mini-batch [default value is 48]
+--epochs                      Number of epochs over the model to train [default value is 10]
+--warmup                      Number of warmups over the model to train [default value is 1]
+--save_root                   Result saved root path [default value is 'result']
+```
+
+### Test Model
+
+```
+python test.py --num 8
+optional arguments:
+--data_root                   Datasets root path [default value is '/data']
+--query_name                  Query image name [default value is '/data/sketchy/val/sketch/cow/n01887787_591-14.jpg']
+--data_base                   Queried database [default value is 'result/sketchy_resnet50_2048_vectors.pth']
+--num                         Retrieval number [default value is 4]
 --save_root                   Result saved root path [default value is 'result']
 ```
 
 ## Benchmarks
 
-The models are trained on one NVIDIA GTX TITAN (12G) GPU. `Adam` is used to optimize the model, `lr` is `1e-3`
-and `weight decay` is `1e-6`. all the hyper-parameters are the default values.
-
-### CUFSF
-<table>
-<thead>
-  <tr>
-    <th rowspan="2">Method</th>
-    <th colspan="4">Day --&gt; Night</th>
-    <th colspan="4">Night --&gt; Day</th>
-    <th colspan="4">Day &lt;--&gt; Night</th>
-    <th rowspan="2">Download</th>
-  </tr>
-  <tr>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td align="center">SimCLR</td>
-    <td align="center">29.33</td>
-    <td align="center">33.33</td>
-    <td align="center">45.33</td>
-    <td align="center">58.67</td>
-    <td align="center">32.00</td>
-    <td align="center">40.00</td>
-    <td align="center">46.67</td>
-    <td align="center">57.33</td>
-    <td align="center">6.00</td>
-    <td align="center">10.00</td>
-    <td align="center">14.00</td>
-    <td align="center">20.00</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1yZhkba1EU79LwqgizDzTUA">agdw</a></td>
-  </tr>
-  <tr>
-    <td align="center">DaCo</td>
-    <td align="center"><b>69.33</b></td>
-    <td align="center"><b>73.33</b></td>
-    <td align="center"><b>81.33</b></td>
-    <td align="center"><b>88.00</b></td>
-    <td align="center"><b>65.33</b></td>
-    <td align="center"><b>80.00</b></td>
-    <td align="center"><b>85.33</b></td>
-    <td align="center"><b>90.67</b></td>
-    <td align="center"><b>52.00</b></td>
-    <td align="center"><b>60.67</b></td>
-    <td align="center"><b>73.33</b></td>
-    <td align="center"><b>81.33</b></td>
-    <td align="center"><a href="https://pan.baidu.com/s/139IHtS2_tOZcEK2Qgt-yQw">5dzs</a></td>
-  </tr>
-</tbody>
-</table>
-
-### ShoeV2
+The models are trained on one NVIDIA GTX TITAN (12G) GPU. `AdamW` is used to optimize the model, `lr` is `1e-5`
+and `weight decay` is `5e-4`. all the hyper-parameters are the default values.
 
 <table>
 <thead>
   <tr>
-    <th rowspan="2">Method</th>
-    <th colspan="4">Clear --&gt; Foggy</th>
-    <th colspan="4">Foggy --&gt; Clear</th>
-    <th colspan="4">Clear &lt;--&gt; Foggy</th>
-    <th rowspan="2">Download</th>
+    <th rowspan="3">Backbone</th>
+    <th rowspan="3">Dim</th>
+    <th colspan="4">Sketchy Extended</th>
+    <th colspan="4">TU-Berlin Extended</th>
+    <th rowspan="3">Download</th>
   </tr>
   <tr>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
+    <td align="center">mAP@200</td>
+    <td align="center">mAP@all</td>
+    <td align="center">P@100</td>
+    <td align="center">P@200</td>
+    <td align="center">mAP@200</td>
+    <td align="center">mAP@all</td>
+    <td align="center">P@100</td>
+    <td align="center">P@200</td>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td align="center">SimCLR</td>
-    <td align="center">43.00</td>
-    <td align="center">55.60</td>
-    <td align="center">67.20</td>
-    <td align="center">76.60</td>
-    <td align="center">69.40</td>
-    <td align="center">80.40</td>
-    <td align="center">89.20</td>
-    <td align="center">94.00</td>
-    <td align="center">2.30</td>
-    <td align="center">3.70</td>
-    <td align="center">5.20</td>
-    <td align="center">7.80</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1ogY5eC1eb3IHemOsVO-ieg">hdhn</a></td>
+    <td align="center">VGG16</td>
+    <td align="center">64</td>
+    <td align="center">55.8</td>
+    <td align="center">39.3</td>
+    <td align="center">52.9</td>
+    <td align="center">48.2</td>
+    <td align="center">59.3</td>
+    <td align="center">38.8</td>
+    <td align="center">57.2</td>
+    <td align="center">53.9</td>
+    <td align="center"><a href="https://pan.baidu.com/s/1uGw9MdDVGHYchJ4fXUjIhg">u7qg</a></td>
   </tr>
   <tr>
-    <td align="center">DaCo</td>
-    <td align="center"><b>96.40</b></td>
-    <td align="center"><b>99.00</b></td>
-    <td align="center"><b>99.60</b></td>
-    <td align="center"><b>99.80</b></td>
-    <td align="center"><b>95.60</b></td>
-    <td align="center"><b>97.80</b></td>
-    <td align="center"><b>99.40</b></td>
-    <td align="center"><b>99.80</b></td>
-    <td align="center"><b>47.70</b></td>
-    <td align="center"><b>65.30</b></td>
-    <td align="center"><b>80.10</b></td>
-    <td align="center"><b>91.00</b></td>
-    <td align="center"><a href="https://pan.baidu.com/s/1ForxWPJ_k3Eq_EXgLtpHCA">azvx</a></td>
-  </tr>
-</tbody>
-</table>
-
-### ChairV2
-
-<table>
-<thead>
-  <tr>
-    <th rowspan="2">Method</th>
-    <th colspan="4">Sunset --&gt; Rainy Night</th>
-    <th colspan="4">Rainy Night --&gt; Sunset</th>
-    <th colspan="4">Sunset &lt;--&gt; Rainy Night</th>
-    <th rowspan="2">Download</th>
+    <td align="center">VGG16</td>
+    <td align="center">512</td>
+    <td align="center">61.6</td>
+    <td align="center">45.1</td>
+    <td align="center">58.8</td>
+    <td align="center">53.7</td>
+    <td align="center">62.6</td>
+    <td align="center">41.9</td>
+    <td align="center">60.3</td>
+    <td align="center">56.7</td>
+    <td align="center"><a href="https://pan.baidu.com/s/1431mOh9jAmXPzKq-o6YYJg">6up4</a></td>
   </tr>
   <tr>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-    <td align="center">R@1</td>
-    <td align="center">R@2</td>
-    <td align="center">R@4</td>
-    <td align="center">R@8</td>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td align="center">SimCLR</td>
-    <td align="center">25.00</td>
-    <td align="center">35.00</td>
-    <td align="center">40.00</td>
-    <td align="center">53.33</td>
-    <td align="center">20.00</td>
-    <td align="center">26.67</td>
-    <td align="center">41.67</td>
-    <td align="center">48.33</td>
-    <td align="center">6.67</td>
-    <td align="center">9.17</td>
-    <td align="center">15.83</td>
-    <td align="center">24.17</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1l5D86pAkI9duvDH_AQOZVQ">afeg</a></td>
+    <td align="center">VGG16</td>
+    <td align="center">4096</td>
+    <td align="center">63.1</td>
+    <td align="center">46.6</td>
+    <td align="center">60.3</td>
+    <td align="center">55.1</td>
+    <td align="center">63.6</td>
+    <td align="center">43.5</td>
+    <td align="center">61.4</td>
+    <td align="center">58.2</td>
+    <td align="center"><a href="https://pan.baidu.com/s/1BJMT_nL7YpTkNpKKaHljYQ">hznm</a></td>
   </tr>
   <tr>
-    <td align="center">DaCo</td>
-    <td align="center"><b>46.67</b></td>
-    <td align="center"><b>66.67</b></td>
-    <td align="center"><b>75.00</b></td>
-    <td align="center"><b>88.33</b></td>
-    <td align="center"><b>45.00</b></td>
-    <td align="center"><b>50.00</b></td>
-    <td align="center"><b>70.00</b></td>
-    <td align="center"><b>86.67</b></td>
-    <td align="center"><b>28.33</b></td>
-    <td align="center"><b>39.17</b></td>
-    <td align="center"><b>50.00</b></td>
-    <td align="center"><b>67.50</b></td>
-    <td align="center"><a href="https://pan.baidu.com/s/1PHednJb8PQ2FVb6Ht8jJTg">sasq</a></td>
+    <td align="center">ResNet50</td>
+    <td align="center">128</td>
+    <td align="center">64.3</td>
+    <td align="center">49.8</td>
+    <td align="center">61.9</td>
+    <td align="center">57.8</td>
+    <td align="center">66.0</td>
+    <td align="center">49.4</td>
+    <td align="center">64.4</td>
+    <td align="center">61.8</td>
+    <td align="center"><a href="https://pan.baidu.com/s/1xRgFfI74zfH8rX12DcOwEQ">uhkp</a></td>
+  </tr>
+  <tr>
+    <td align="center">ResNet50</td>
+    <td align="center">512</td>
+    <td align="center">68.4</td>
+    <td align="center">54.8</td>
+    <td align="center">66.0</td>
+    <td align="center">61.8</td>
+    <td align="center">69.0</td>
+    <td align="center">53.5</td>
+    <td align="center">67.5</td>
+    <td align="center">65.3</td>
+    <td align="center"><a href="https://pan.baidu.com/s/1hkez_L-YtGJss9ngkmvbTg">u8ct</a></td>
+  </tr>
+  <tr>
+    <td align="center">ResNet50</td>
+    <td align="center">2048</td>
+    <td align="center">69.0</td>
+    <td align="center">55.9</td>
+    <td align="center">66.7</td>
+    <td align="center">62.5</td>
+    <td align="center">70.4</td>
+    <td align="center">55.0</td>
+    <td align="center">69.0</td>
+    <td align="center">66.6</td>
+    <td align="center"><a href="https://pan.baidu.com/s/1uMsoU2A31MFnfMZmBsL0Xw">ipr3</a></td>
   </tr>
 </tbody>
 </table>
 
 ## Results
 
-### CUFSF
-
-![tokyo](result/cufsf.png)
-
-### ShoeV2
-
-![cityscapes](result/tuberlin.png)
-
-### ChairV2
-
-![synthia](result/sketchy.png)
-
-### T-SNE
-
-![tsne](result/tsne.png)
+![vis](result/vis.png)
