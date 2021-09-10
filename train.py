@@ -1,4 +1,5 @@
 import argparse
+import itertools
 import os
 import random
 
@@ -40,15 +41,28 @@ def train(net, data_loader, train_optimizer):
 
 
 # val for one epoch
-def val(net, data_loader):
-    net.eval()
+def val(backbone, sketch_encoder, photo_encoder, data_loader):
+    backbone.eval()
+    sketch_encoder.eval()
+    photo_encoder.eval()
     vectors, domains, labels = [], [], []
     with torch.no_grad():
         for img, domain, label in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
-            proj = net(img.cuda())
-            vectors.append(proj.cpu())
-            domains.append(domain)
+            proj = backbone(img.cuda())
+            photo = proj[domain == 0]
+            sketch = proj[domain == 1]
+            photo_emb = photo_encoder(photo)
+            sketch_emb = sketch_encoder(sketch)
+            emb = torch.cat((photo_emb, sketch_emb), dim=0)
+            vectors.append(emb.cpu())
+            photo_label = label[domain == 0]
+            sketch_label = label[domain == 1]
+            label = torch.cat((photo_label, sketch_label), dim=0)
             labels.append(label)
+            photo_domain = domain[domain == 0]
+            sketch_domain = domain[domain == 1]
+            domain = torch.cat((photo_domain, sketch_domain), dim=0)
+            domains.append(domain)
         vectors = torch.cat(vectors, dim=0)
         domains = torch.cat(domains, dim=0)
         labels = torch.cat(labels, dim=0)
@@ -87,7 +101,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_data, batch_size=batch_size // 2, shuffle=True, num_workers=8)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
-    # model setup
+    # model define
     extractor = Extractor(backbone_type).cuda()
     sketch_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
     photo_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
@@ -98,8 +112,11 @@ if __name__ == '__main__':
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     # optimizer config
-    optimizer = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(), 'lr': 1e-1}],
-                      lr=1e-5, weight_decay=5e-4)
+    optimizer = AdamW([{'params': extractor.parameters(), 'lr': 1e-5},
+                       {'params': class_criterion.parameters(), 'lr': 1e-1},
+                       {'params': itertools.chain(sketch_shape_encoder.parameters(), photo_shape_encoder.parameters(),
+                                                  photo_appearance_encoder.parameters(), photo_generator.parameters(),
+                                                  photo_discriminator.parameters())}], lr=1e-3, weight_decay=5e-4)
     # training loop
     results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
     save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
@@ -109,7 +126,7 @@ if __name__ == '__main__':
     for epoch in range(1, epochs + 1):
         train_loss = train(extractor, train_loader, optimizer)
         results['train_loss'].append(train_loss)
-        val_precise, features = val(extractor, val_loader)
+        val_precise, features = val(extractor, sketch_shape_encoder, photo_shape_encoder, val_loader)
         results['val_precise'].append(val_precise * 100)
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
@@ -117,5 +134,14 @@ if __name__ == '__main__':
 
         if val_precise > best_precise:
             best_precise = val_precise
-            torch.save(extractor.state_dict(), '{}/{}_model.pth'.format(save_root, save_name_pre))
+            torch.save(extractor.state_dict(), '{}/{}_extractor.pth'.format(save_root, save_name_pre))
+            torch.save(sketch_shape_encoder.state_dict(),
+                       '{}/{}_sketch_shape_encoder.pth'.format(save_root, save_name_pre))
+            torch.save(photo_shape_encoder.state_dict(),
+                       '{}/{}_photo_shape_encoder.pth'.format(save_root, save_name_pre))
+            torch.save(photo_appearance_encoder.state_dict(),
+                       '{}/{}_photo_appearance_encoder.pth'.format(save_root, save_name_pre))
+            torch.save(photo_generator.state_dict(), '{}/{}_photo_generator.pth'.format(save_root, save_name_pre))
+            torch.save(photo_discriminator.state_dict(),
+                       '{}/{}_photo_discriminator.pth'.format(save_root, save_name_pre))
             torch.save(features, '{}/{}_vectors.pth'.format(save_root, save_name_pre))

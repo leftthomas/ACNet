@@ -22,7 +22,7 @@ class Encoder(nn.Module):
         x = self.relu(self.bn1(self.fc1(x)))
         x = self.relu(self.bn2(self.fc2(x)))
         out = self.fc(x)
-        return out
+        return F.normalize(out, dim=-1)
 
 
 class Generator(nn.Module):
