@@ -1,5 +1,6 @@
 import glob
 import os
+import random
 
 from PIL import Image
 from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator, precision_at_k
@@ -35,7 +36,9 @@ class DomainDataset(Dataset):
                 pass
             else:
                 images += sketches
-                images += photos
+                # only append sketches for train
+                if split == 'val':
+                    images += photos
         self.images = sorted(images)
         self.transform = get_transform(split)
 
@@ -48,14 +51,25 @@ class DomainDataset(Dataset):
                 self.classes[label] = i
                 i += 1
             self.labels.append(self.classes[label])
+        # store photos for each class to easy sample for sketch in training period
+        if split == 'train':
+            self.refs = {}
+            for key, value in self.classes.items():
+                self.refs[value] = glob.glob(os.path.join(data_root, data_name, split, 'photo', key, '*.jpg'))
+
+        self.split = split
 
     def __getitem__(self, index):
-        img_name = self.images[index]
-        domain = self.domains[index]
-        label = self.labels[index]
-        img = Image.open(img_name)
+        img = Image.open(self.images[index])
         img = self.transform(img)
-        return img, domain, label, img_name
+        label = self.labels[index]
+        if self.split == 'val':
+            domain = self.domains[index]
+            return img, domain, label
+        else:
+            ref = Image.open(random.choice(self.refs[label]))
+            ref = self.transform(ref)
+            return img, ref, label
 
     def __len__(self):
         return len(self.images)

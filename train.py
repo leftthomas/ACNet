@@ -26,14 +26,14 @@ cudnn.benchmark = False
 def train(net, data_loader, train_optimizer):
     net.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
-    for img, domain, label, img_name in train_bar:
-        proj = net(img.cuda())
+    for sketch, photo, label in train_bar:
+        proj = net(sketch.cuda())
         loss = loss_criterion(proj, label.cuda())
         train_optimizer.zero_grad()
         loss.backward()
         train_optimizer.step()
-        total_num += img.size(0)
-        total_loss += loss.item() * img.size(0)
+        total_num += sketch.size(0)
+        total_loss += loss.item() * sketch.size(0)
         train_bar.set_description('Train Epoch: [{}/{}] Loss: {:.4f}'.format(epoch, epochs, total_loss / total_num))
 
     return total_loss / total_num
@@ -44,7 +44,7 @@ def val(net, data_loader):
     net.eval()
     vectors, domains, labels = [], [], []
     with torch.no_grad():
-        for img, domain, label, img_name in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
+        for img, domain, label in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
             proj = net(img.cuda())
             vectors.append(proj.cpu())
             domains.append(domain)
@@ -71,41 +71,35 @@ if __name__ == '__main__':
                         help='Dataset name')
     parser.add_argument('--backbone_type', default='resnet50', type=str, choices=['resnet50', 'vgg16'],
                         help='Backbone type')
-    parser.add_argument('--proj_dim', default=512, type=int, help='Projected embedding dim')
+    parser.add_argument('--emb_dim', default=512, type=int, help='Embedding dim')
     parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
     parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
-    parser.add_argument('--warmup', default=1, type=int, help='Number of warmups over the model to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     # args parse
     args = parser.parse_args()
-    data_root, data_name, backbone_type, proj_dim = args.data_root, args.data_name, args.backbone_type, args.proj_dim
-    batch_size, epochs, warmup, save_root = args.batch_size, args.epochs, args.warmup, args.save_root
+    data_root, data_name, backbone_type, emb_dim = args.data_root, args.data_name, args.backbone_type, args.emb_dim
+    batch_size, epochs, save_root = args.batch_size, args.epochs, args.save_root
 
     # data prepare
     train_data = DomainDataset(data_root, data_name, split='train')
     val_data = DomainDataset(data_root, data_name, split='val')
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=8)
+    train_loader = DataLoader(train_data, batch_size=batch_size // 2, shuffle=True, num_workers=8)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
     # model and loss setup
-    model = Extractor(backbone_type, proj_dim).cuda()
-    loss_criterion = NormalizedSoftmaxLoss(len(train_data.classes), proj_dim).cuda()
+    model = Extractor(backbone_type).cuda()
+    loss_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     # optimizer config
     optimizer = AdamW([{'params': model.parameters()}, {'params': loss_criterion.parameters(), 'lr': 1e-1}],
                       lr=1e-5, weight_decay=5e-4)
     # training loop
     results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
-    save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, proj_dim)
+    save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
     if not os.path.exists(save_root):
         os.makedirs(save_root)
     best_precise = 0.0
     for epoch in range(1, epochs + 1):
-
-        # warmup, not update the parameters of backbone
-        for param in model.extractor.parameters():
-            param.requires_grad = False if epoch <= warmup else True
-
         train_loss = train(model, train_loader, optimizer)
         results['train_loss'].append(train_loss)
         val_precise, features = val(model, val_loader)
