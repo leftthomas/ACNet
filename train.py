@@ -11,7 +11,7 @@ from torch.optim import AdamW
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Model
+from model import Extractor
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
     # model and loss setup
-    model = Model(backbone_type, proj_dim).cuda()
+    model = Extractor(backbone_type, proj_dim).cuda()
     loss_criterion = NormalizedSoftmaxLoss(len(train_data.classes), proj_dim).cuda()
     # optimizer config
     optimizer = AdamW([{'params': model.parameters()}, {'params': loss_criterion.parameters(), 'lr': 1e-1}],
