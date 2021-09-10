@@ -28,7 +28,7 @@ if __name__ == '__main__':
     if query_name not in val_data.images:
         raise FileNotFoundError('{} not found'.format(query_name))
     query_index = val_data.images.index(query_name)
-    query_image = Image.open(query_name).resize((224, 224), resample=Image.BICUBIC)
+    query_image = Image.open(query_name).resize((224, 224), resample=Image.BILINEAR)
     query_label = val_data.labels[query_index]
     query_feature = vectors[query_index]
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     os.mkdir(result_path)
     query_image.save('{}/query.jpg'.format(result_path))
     for num, index in enumerate(idx):
-        retrieval_image = Image.open(gallery_images[index.item()]).resize((224, 224), resample=Image.BICUBIC)
+        retrieval_image = Image.open(gallery_images[index.item()]).resize((224, 224), resample=Image.BILINEAR)
         draw = ImageDraw.Draw(retrieval_image)
         retrieval_label = gallery_labels[index.item()]
         retrieval_status = retrieval_label == query_label
