@@ -11,7 +11,7 @@ from torch.optim import AdamW
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor
+from model import Extractor, Discriminator, Encoder, Generator
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -28,7 +28,7 @@ def train(net, data_loader, train_optimizer):
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
     for sketch, photo, label in train_bar:
         proj = net(sketch.cuda())
-        loss = loss_criterion(proj, label.cuda())
+        loss = class_criterion(proj, label.cuda())
         train_optimizer.zero_grad()
         loss.backward()
         train_optimizer.step()
@@ -87,11 +87,18 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_data, batch_size=batch_size // 2, shuffle=True, num_workers=8)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
-    # model and loss setup
-    model = Extractor(backbone_type).cuda()
-    loss_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
+    # model setup
+    extractor = Extractor(backbone_type).cuda()
+    sketch_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
+    photo_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
+    photo_appearance_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
+    photo_generator = Generator(2 * emb_dim).cuda()
+    photo_discriminator = Discriminator().cuda()
+
+    # loss setup
+    class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     # optimizer config
-    optimizer = AdamW([{'params': model.parameters()}, {'params': loss_criterion.parameters(), 'lr': 1e-1}],
+    optimizer = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(), 'lr': 1e-1}],
                       lr=1e-5, weight_decay=5e-4)
     # training loop
     results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
@@ -100,9 +107,9 @@ if __name__ == '__main__':
         os.makedirs(save_root)
     best_precise = 0.0
     for epoch in range(1, epochs + 1):
-        train_loss = train(model, train_loader, optimizer)
+        train_loss = train(extractor, train_loader, optimizer)
         results['train_loss'].append(train_loss)
-        val_precise, features = val(model, val_loader)
+        val_precise, features = val(extractor, val_loader)
         results['val_precise'].append(val_precise * 100)
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
@@ -110,5 +117,5 @@ if __name__ == '__main__':
 
         if val_precise > best_precise:
             best_precise = val_precise
-            torch.save(model.state_dict(), '{}/{}_model.pth'.format(save_root, save_name_pre))
+            torch.save(extractor.state_dict(), '{}/{}_model.pth'.format(save_root, save_name_pre))
             torch.save(features, '{}/{}_vectors.pth'.format(save_root, save_name_pre))
