@@ -7,12 +7,13 @@ import numpy as np
 import pandas as pd
 import torch
 from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
+from torch import nn
 from torch.backends import cudnn
 from torch.optim import AdamW
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Discriminator, Encoder, Generator
+from model import Extractor, Encoder, Generator
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -24,12 +25,24 @@ cudnn.benchmark = False
 
 
 # train for one epoch
-def train(net, data_loader, train_optimizer):
-    net.train()
+def train(backbone, data_loader, train_optimizer):
+    backbone.train()
+    sketch_shape_encoder.train()
+    photo_shape_encoder.train()
+    photo_appearance_encoder.train()
+    photo_generator.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
     for sketch, photo, label in train_bar:
-        proj = net(sketch.cuda())
-        loss = class_criterion(proj, label.cuda())
+        sketch_proj = backbone(sketch.cuda())
+        photo_proj = backbone(photo.cuda())
+        sketch_shape = sketch_shape_encoder(sketch_proj)
+        photo_shape = photo_shape_encoder(photo_proj)
+        photo_appearance = photo_appearance_encoder(photo_proj)
+        sketch_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
+        photo_generated = photo_generator(torch.cat((photo_shape, photo_appearance), dim=-1))
+        class_loss = class_criterion(sketch_shape, label.cuda()) + class_criterion(photo_shape, label.cuda())
+        mse_loss = mse_criterion(sketch_generated, photo_generated)
+        loss = class_loss + mse_loss
         train_optimizer.zero_grad()
         loss.backward()
         train_optimizer.step()
@@ -107,16 +120,16 @@ if __name__ == '__main__':
     photo_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
     photo_appearance_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
     photo_generator = Generator(2 * emb_dim).cuda()
-    photo_discriminator = Discriminator().cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
+    mse_criterion = nn.MSELoss().cuda()
     # optimizer config
     optimizer = AdamW([{'params': extractor.parameters(), 'lr': 1e-5},
                        {'params': class_criterion.parameters(), 'lr': 1e-1},
                        {'params': itertools.chain(sketch_shape_encoder.parameters(), photo_shape_encoder.parameters(),
-                                                  photo_appearance_encoder.parameters(), photo_generator.parameters(),
-                                                  photo_discriminator.parameters())}], lr=1e-3, weight_decay=5e-4)
+                                                  photo_appearance_encoder.parameters(), photo_generator.parameters())}
+                       ], lr=1e-3, weight_decay=5e-4)
     # training loop
     results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
     save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
@@ -142,6 +155,4 @@ if __name__ == '__main__':
             torch.save(photo_appearance_encoder.state_dict(),
                        '{}/{}_photo_appearance_encoder.pth'.format(save_root, save_name_pre))
             torch.save(photo_generator.state_dict(), '{}/{}_photo_generator.pth'.format(save_root, save_name_pre))
-            torch.save(photo_discriminator.state_dict(),
-                       '{}/{}_photo_discriminator.pth'.format(save_root, save_name_pre))
             torch.save(features, '{}/{}_vectors.pth'.format(save_root, save_name_pre))
