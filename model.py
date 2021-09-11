@@ -78,4 +78,4 @@ class Extractor(nn.Module):
     def forward(self, img):
         feat = self.backbone(img)
         feat = torch.flatten(F.adaptive_max_pool2d(feat, (1, 1)), start_dim=1)
-        return F.normalize(feat, dim=-1)
+        return feat
