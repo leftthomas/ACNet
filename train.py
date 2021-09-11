@@ -41,7 +41,7 @@ def train(backbone, data_loader, train_optimizer):
         sketch_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
         photo_generated = photo_generator(torch.cat((photo_shape, photo_appearance), dim=-1))
         class_loss = class_criterion(sketch_shape, label.cuda()) + class_criterion(photo_shape, label.cuda())
-        mse_loss = mse_criterion(sketch_generated, photo_generated)
+        mse_loss = mse_criterion(sketch_generated, photo) + mse_criterion(photo_generated, photo)
         loss = class_loss + mse_loss
         train_optimizer.zero_grad()
         loss.backward()
