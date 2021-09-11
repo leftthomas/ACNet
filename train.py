@@ -33,14 +33,15 @@ def train(backbone, data_loader, train_optimizer):
     photo_generator.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
     for sketch, photo, label in train_bar:
-        sketch_proj = backbone(sketch.cuda())
-        photo_proj = backbone(photo.cuda())
+        sketch, photo, label = sketch.cuda(), photo.cuda(), label.cuda()
+        sketch_proj = backbone(sketch)
+        photo_proj = backbone(photo)
         sketch_shape = sketch_shape_encoder(sketch_proj)
         photo_shape = photo_shape_encoder(photo_proj)
         photo_appearance = photo_appearance_encoder(photo_proj)
         sketch_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
         photo_generated = photo_generator(torch.cat((photo_shape, photo_appearance), dim=-1))
-        class_loss = class_criterion(sketch_shape, label.cuda()) + class_criterion(photo_shape, label.cuda())
+        class_loss = class_criterion(sketch_shape, label) + class_criterion(photo_shape, label)
         mse_loss = mse_criterion(sketch_generated, photo) + mse_criterion(photo_generated, photo)
         loss = class_loss + mse_loss
         train_optimizer.zero_grad()
