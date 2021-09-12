@@ -126,10 +126,9 @@ if __name__ == '__main__':
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     mse_criterion = nn.MSELoss().cuda()
     # optimizer config
-    optimizer = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(), 'lr': 1e-1},
-                       {'params': itertools.chain(sketch_shape_encoder.parameters(), photo_shape_encoder.parameters(),
-                                                  photo_appearance_encoder.parameters(), photo_generator.parameters())}
-                       ], lr=1e-5, weight_decay=5e-4)
+    optimizer = AdamW(itertools.chain(extractor.parameters(), class_criterion.parameters(),
+                                      sketch_shape_encoder.parameters(), photo_shape_encoder.parameters(),
+                                      photo_appearance_encoder.parameters(), photo_generator.parameters()), lr=1e-5)
     # training loop
     results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
     save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
