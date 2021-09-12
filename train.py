@@ -13,7 +13,7 @@ from torch.optim import AdamW
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Encoder, Generator
+from model import Extractor, Encoder
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -23,6 +23,9 @@ torch.manual_seed(1)
 cudnn.deterministic = True
 cudnn.benchmark = False
 
+mean = torch.as_tensor((0.485, 0.456, 0.406)).view(1, -1, 1, 1).cuda()
+std = torch.as_tensor((0.229, 0.224, 0.225)).view(1, -1, 1, 1).cuda()
+
 
 # train for one epoch
 def train(backbone, data_loader, train_optimizer):
@@ -30,6 +33,7 @@ def train(backbone, data_loader, train_optimizer):
     sketch_shape_encoder.train()
     photo_shape_encoder.train()
     photo_appearance_encoder.train()
+    sketch_generator.train()
     photo_generator.train()
     total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
     for sketch, photo, label in train_bar:
@@ -39,10 +43,10 @@ def train(backbone, data_loader, train_optimizer):
         sketch_shape = sketch_shape_encoder(sketch_proj)
         photo_shape = photo_shape_encoder(photo_proj)
         photo_appearance = photo_appearance_encoder(photo_proj)
-        sketch_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
-        photo_generated = photo_generator(torch.cat((photo_shape, photo_appearance), dim=-1))
+        sketch_generated = sketch_generator(photo_shape)
+        photo_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
         class_loss = class_criterion(sketch_shape, label) + class_criterion(photo_shape, label)
-        mse_loss = mse_criterion(sketch_generated, photo) + mse_criterion(photo_generated, photo)
+        mse_loss = mse_criterion(sketch_generated, sketch_proj) + mse_criterion(photo_generated, photo_proj)
         loss = class_loss + mse_loss
         train_optimizer.zero_grad()
         loss.backward()
@@ -120,7 +124,8 @@ if __name__ == '__main__':
     sketch_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
     photo_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
     photo_appearance_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
-    photo_generator = Generator(2 * emb_dim).cuda()
+    sketch_generator = Encoder(emb_dim, 2048 if backbone_type == 'resnet50' else 512).cuda()
+    photo_generator = Encoder(2 * emb_dim, 2048 if backbone_type == 'resnet50' else 512).cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
@@ -128,7 +133,8 @@ if __name__ == '__main__':
     # optimizer config
     optimizer = AdamW(itertools.chain(extractor.parameters(), class_criterion.parameters(),
                                       sketch_shape_encoder.parameters(), photo_shape_encoder.parameters(),
-                                      photo_appearance_encoder.parameters(), photo_generator.parameters()), lr=1e-5)
+                                      photo_appearance_encoder.parameters(), sketch_generator.parameters(),
+                                      photo_generator.parameters()), lr=1e-5)
     # training loop
     results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
     save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
@@ -153,5 +159,6 @@ if __name__ == '__main__':
                        '{}/{}_photo_shape_encoder.pth'.format(save_root, save_name_pre))
             torch.save(photo_appearance_encoder.state_dict(),
                        '{}/{}_photo_appearance_encoder.pth'.format(save_root, save_name_pre))
+            torch.save(sketch_generator.state_dict(), '{}/{}_sketch_generator.pth'.format(save_root, save_name_pre))
             torch.save(photo_generator.state_dict(), '{}/{}_photo_generator.pth'.format(save_root, save_name_pre))
             torch.save(features, '{}/{}_vectors.pth'.format(save_root, save_name_pre))
