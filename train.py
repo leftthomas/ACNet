@@ -6,14 +6,16 @@ import random
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Encoder
+from model import Extractor, Discriminator, Generator, weights_init_normal
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -22,9 +24,6 @@ np.random.seed(1)
 torch.manual_seed(1)
 cudnn.deterministic = True
 cudnn.benchmark = False
-
-mean = torch.as_tensor((0.485, 0.456, 0.406)).view(1, -1, 1, 1).cuda()
-std = torch.as_tensor((0.229, 0.224, 0.225)).view(1, -1, 1, 1).cuda()
 
 
 # train for one epoch
@@ -47,7 +46,8 @@ def train(backbone, data_loader, train_optimizer):
         photo_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
         class_loss = class_criterion(sketch_shape, label) + class_criterion(photo_shape, label)
         mse_loss = mse_criterion(sketch_generated, sketch_proj) + mse_criterion(photo_generated, photo_proj)
-        loss = class_loss + mse_loss
+        cos_loss = F.cosine_similarity(photo_shape, photo_appearance, dim=-1).mean()
+        loss = class_loss + mse_loss + cos_loss
         train_optimizer.zero_grad()
         loss.backward()
         train_optimizer.step()
@@ -66,12 +66,25 @@ def val(backbone, sketch_encoder, photo_encoder, data_loader):
     vectors, domains, labels = [], [], []
     with torch.no_grad():
         for img, domain, label in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
-            proj = backbone(img.cuda())
-            photo = proj[domain == 0]
-            sketch = proj[domain == 1]
-            photo_emb = photo_encoder(photo)
-            sketch_emb = sketch_encoder(sketch)
-            emb = torch.cat((photo_emb, sketch_emb), dim=0)
+            img = img.cuda()
+            photo_real = img[domain == 0]
+            sketch_real = img[domain == 1]
+            if photo_real.size(0) != 0:
+                sketch_fake = sketch_encoder(photo_real)
+                photo_real_proj = backbone(photo_real)
+                sketch_fake_proj = backbone(sketch_fake)
+                photo_emb = torch.cat((photo_real_proj, sketch_fake_proj), dim=-1)
+            if sketch_real.size(0) != 0:
+                photo_fake = photo_encoder(sketch_real)
+                sketch_real_proj = backbone(sketch_real)
+                photo_fake_proj = backbone(photo_fake)
+                sketch_emb = torch.cat((sketch_real_proj, photo_fake_proj), dim=-1)
+            if photo_real.size(0) == 0:
+                emb = sketch_emb
+            if sketch_real.size(0) == 0:
+                emb = photo_emb
+            if photo_real.size(0) != 0 and sketch_real.size(0) != 0:
+                emb = torch.cat((photo_emb, sketch_emb), dim=0)
             vectors.append(emb.cpu())
             photo_label = label[domain == 0]
             sketch_label = label[domain == 1]
@@ -120,45 +133,65 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
     # model define
-    extractor = Extractor(backbone_type).cuda()
-    sketch_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
-    photo_shape_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
-    photo_appearance_encoder = Encoder(2048 if backbone_type == 'resnet50' else 512, emb_dim).cuda()
-    sketch_generator = Encoder(emb_dim, 2048 if backbone_type == 'resnet50' else 512).cuda()
-    photo_generator = Encoder(2 * emb_dim, 2048 if backbone_type == 'resnet50' else 512).cuda()
+    extractor = Extractor(backbone_type, emb_dim // 2).cuda()
+    sketch_generator = Generator().cuda()
+    photo_generator = Generator().cuda()
+    sketch_discriminator = Discriminator().cuda()
+    photo_discriminator = Discriminator().cuda()
+    sketch_generator.apply(weights_init_normal)
+    photo_generator.apply(weights_init_normal)
+    sketch_discriminator.apply(weights_init_normal)
+    photo_discriminator.apply(weights_init_normal)
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
-    mse_criterion = nn.MSELoss().cuda()
+    adversarial_criterion = nn.MSELoss()
+    cycle_criterion = nn.L1Loss()
+    identity_criterion = nn.L1Loss()
     # optimizer config
-    optimizer = AdamW(itertools.chain(extractor.parameters(), class_criterion.parameters(),
-                                      sketch_shape_encoder.parameters(), photo_shape_encoder.parameters(),
-                                      photo_appearance_encoder.parameters(), sketch_generator.parameters(),
-                                      photo_generator.parameters()), lr=1e-5)
+    optimizer_extractor = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
+                                                                      'lr': 1e-1}], lr=1e-5, weight_decay=5e-4)
+    optimizer_generator = AdamW(itertools.chain(sketch_generator.parameters(), photo_generator.parameters()),
+                                lr=2e-4, betas=(0.5, 0.999))
+    optimizer_sketch_discriminator = AdamW(sketch_discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+    optimizer_photo_discriminator = AdamW(photo_discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+
+    lr_scheduler_generator = LambdaLR(optimizer_generator, lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / float(5))
+    lr_scheduler_sketch_discriminator = LambdaLR(optimizer_sketch_discriminator,
+                                                 lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / float(5))
+    lr_scheduler_photo_discriminator = LambdaLR(optimizer_photo_discriminator,
+                                                lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / float(5))
     # training loop
-    results = {'train_loss': [], 'val_precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
+    results = {'extractor_loss': [], 'generator_loss': [], 'sketch_discriminator_loss': [],
+               'photo_discriminator_loss': [], 'precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
     save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
     if not os.path.exists(save_root):
         os.makedirs(save_root)
     best_precise = 0.0
     for epoch in range(1, epochs + 1):
-        train_loss = train(extractor, train_loader, optimizer)
-        results['train_loss'].append(train_loss)
-        val_precise, features = val(extractor, sketch_shape_encoder, photo_shape_encoder, val_loader)
-        results['val_precise'].append(val_precise * 100)
+        extractor_loss, generator_loss, sketch_discriminator_loss, photo_discriminator_loss = train(extractor,
+                                                                                                    train_loader,
+                                                                                                    optimizer_extractor)
+        results['extractor_loss'].append(extractor_loss)
+        results['generator_loss'].append(generator_loss)
+        results['sketch_discriminator_loss'].append(sketch_discriminator_loss)
+        results['photo_discriminator_loss'].append(photo_discriminator_loss)
+        precise, features = val(extractor, sketch_generator, photo_generator, val_loader)
+        results['precise'].append(precise * 100)
+        lr_scheduler_generator.step()
+        lr_scheduler_sketch_discriminator.step()
+        lr_scheduler_photo_discriminator.step()
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
         data_frame.to_csv('{}/{}_results.csv'.format(save_root, save_name_pre), index_label='epoch')
 
-        if val_precise > best_precise:
-            best_precise = val_precise
+        if precise > best_precise:
+            best_precise = precise
             torch.save(extractor.state_dict(), '{}/{}_extractor.pth'.format(save_root, save_name_pre))
-            torch.save(sketch_shape_encoder.state_dict(),
-                       '{}/{}_sketch_shape_encoder.pth'.format(save_root, save_name_pre))
-            torch.save(photo_shape_encoder.state_dict(),
-                       '{}/{}_photo_shape_encoder.pth'.format(save_root, save_name_pre))
-            torch.save(photo_appearance_encoder.state_dict(),
-                       '{}/{}_photo_appearance_encoder.pth'.format(save_root, save_name_pre))
             torch.save(sketch_generator.state_dict(), '{}/{}_sketch_generator.pth'.format(save_root, save_name_pre))
             torch.save(photo_generator.state_dict(), '{}/{}_photo_generator.pth'.format(save_root, save_name_pre))
+            torch.save(sketch_discriminator.state_dict(),
+                       '{}/{}_sketch_discriminator.pth'.format(save_root, save_name_pre))
+            torch.save(photo_discriminator.state_dict(),
+                       '{}/{}_photo_discriminator.pth'.format(save_root, save_name_pre))
             torch.save(features, '{}/{}_vectors.pth'.format(save_root, save_name_pre))

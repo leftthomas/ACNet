@@ -4,29 +4,99 @@ import torch.nn.functional as F
 from torchvision.models import vgg16, resnet50
 
 
-class Encoder(nn.Module):
-    def __init__(self, in_dim, out_dim):
-        super(Encoder, self).__init__()
+class ResidualBlock(nn.Module):
+    def __init__(self, in_features):
+        super(ResidualBlock, self).__init__()
 
-        hid_dim = int((in_dim + out_dim) / 2)
+        conv_block = [nn.ReflectionPad2d(1),
+                      nn.Conv2d(in_features, in_features, 3),
+                      nn.InstanceNorm2d(in_features),
+                      nn.ReLU(inplace=True),
+                      nn.ReflectionPad2d(1),
+                      nn.Conv2d(in_features, in_features, 3),
+                      nn.InstanceNorm2d(in_features)]
 
-        self.fc1 = nn.Linear(in_dim, hid_dim)
-        self.bn1 = nn.BatchNorm1d(hid_dim)
-        self.fc2 = nn.Linear(hid_dim, hid_dim)
-        self.bn2 = nn.BatchNorm1d(hid_dim)
-
-        self.relu = nn.LeakyReLU(0.2, inplace=True)
-        self.fc = nn.Linear(hid_dim, out_dim)
+        self.conv_block = nn.Sequential(*conv_block)
 
     def forward(self, x):
-        x = self.relu(self.bn1(self.fc1(x)))
-        x = self.relu(self.bn2(self.fc2(x)))
-        out = self.fc(x)
-        return F.normalize(out, dim=-1)
+        return x + self.conv_block(x)
+
+
+class Generator(nn.Module):
+    def __init__(self, n_residual_blocks=9):
+        super(Generator, self).__init__()
+
+        # initial convolution block
+        model = [nn.ReflectionPad2d(3),
+                 nn.Conv2d(3, 64, 7),
+                 nn.InstanceNorm2d(64),
+                 nn.ReLU(inplace=True)]
+
+        # down sampling
+        in_features = 64
+        out_features = in_features * 2
+        for _ in range(2):
+            model += [nn.Conv2d(in_features, out_features, 3, stride=2, padding=1),
+                      nn.InstanceNorm2d(out_features),
+                      nn.ReLU(inplace=True)]
+            in_features = out_features
+            out_features = in_features * 2
+
+        # residual blocks
+        for _ in range(n_residual_blocks):
+            model += [ResidualBlock(in_features)]
+
+        # up sampling
+        out_features = in_features // 2
+        for _ in range(2):
+            model += [nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=1, output_padding=1),
+                      nn.InstanceNorm2d(out_features),
+                      nn.ReLU(inplace=True)]
+            in_features = out_features
+            out_features = in_features // 2
+
+        # output layer
+        model += [nn.ReflectionPad2d(3),
+                  nn.Conv2d(64, 3, 7),
+                  nn.Tanh()]
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, x):
+        return self.model(x)
+
+
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+
+        # a bunch of convolutions one after another
+        model = [nn.Conv2d(3, 64, 4, stride=2, padding=1),
+                 nn.LeakyReLU(0.2, inplace=True)]
+
+        model += [nn.Conv2d(64, 128, 4, stride=2, padding=1),
+                  nn.InstanceNorm2d(128),
+                  nn.LeakyReLU(0.2, inplace=True)]
+
+        model += [nn.Conv2d(128, 256, 4, stride=2, padding=1),
+                  nn.InstanceNorm2d(256),
+                  nn.LeakyReLU(0.2, inplace=True)]
+
+        model += [nn.Conv2d(256, 512, 4, padding=1),
+                  nn.InstanceNorm2d(512),
+                  nn.LeakyReLU(0.2, inplace=True)]
+
+        # FCN classification layer
+        model += [nn.Conv2d(512, 1, 4, padding=1)]
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, x):
+        return self.model(x)
 
 
 class Extractor(nn.Module):
-    def __init__(self, backbone_type):
+    def __init__(self, backbone_type, emb_dim):
         super(Extractor, self).__init__()
 
         # backbone
@@ -36,8 +106,17 @@ class Extractor(nn.Module):
             if name not in ['avgpool', 'fc', 'classifier']:
                 extractor.append(module)
         self.backbone = nn.Sequential(*extractor)
+        self.fc = nn.Linear(2048 if backbone_type == 'resnet50' else 512, emb_dim)
 
     def forward(self, img):
         feat = self.backbone(img)
         feat = torch.flatten(F.adaptive_max_pool2d(feat, (1, 1)), start_dim=1)
-        return F.normalize(feat, dim=-1)
+        out = self.fc(feat)
+        return F.normalize(out, dim=-1)
+
+
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight, 0.0, 0.02)
+        nn.init.constant_(m.bias, 0.0)

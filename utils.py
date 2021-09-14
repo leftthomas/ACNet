@@ -15,12 +15,12 @@ def get_transform(split='train'):
             transforms.Resize((224, 224), interpolation=InterpolationMode.BILINEAR),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     else:
         return transforms.Compose([
             transforms.Resize((224, 224), interpolation=InterpolationMode.BILINEAR),
             transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 
 class DomainDataset(Dataset):
@@ -105,3 +105,4 @@ def compute_metric(vectors, domains, labels):
     # the mean value is chosen as the representative of precise
     acc['precise'] = (acc['P@100'] + acc['P@200'] + acc['mAP@200'] + acc['mAP@all']) / 4
     return acc
+
