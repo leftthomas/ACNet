@@ -6,7 +6,6 @@ import random
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn.functional as F
 from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
@@ -29,33 +28,83 @@ cudnn.benchmark = False
 # train for one epoch
 def train(backbone, data_loader, train_optimizer):
     backbone.train()
-    sketch_shape_encoder.train()
-    photo_shape_encoder.train()
-    photo_appearance_encoder.train()
     sketch_generator.train()
     photo_generator.train()
-    total_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
+    sketch_discriminator.train()
+    photo_discriminator.train()
+    total_extractor_loss, total_generator_loss, total_sketch_discriminator_loss = 0.0, 0.0, 0.0
+    total_photo_discriminator_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
     for sketch, photo, label in train_bar:
         sketch, photo, label = sketch.cuda(), photo.cuda(), label.cuda()
-        sketch_proj = backbone(sketch)
-        photo_proj = backbone(photo)
-        sketch_shape = sketch_shape_encoder(sketch_proj)
-        photo_shape = photo_shape_encoder(photo_proj)
-        photo_appearance = photo_appearance_encoder(photo_proj)
-        sketch_generated = sketch_generator(photo_shape)
-        photo_generated = photo_generator(torch.cat((sketch_shape, photo_appearance), dim=-1))
-        class_loss = class_criterion(sketch_shape, label) + class_criterion(photo_shape, label)
-        mse_loss = mse_criterion(sketch_generated, sketch_proj) + mse_criterion(photo_generated, photo_proj)
-        cos_loss = F.cosine_similarity(photo_shape, photo_appearance, dim=-1).mean()
-        loss = class_loss + mse_loss + cos_loss
+
+        # generators #
+        optimizer_generator.zero_grad()
+
+        fake_sketch = sketch_generator(photo)
+        fake_photo = photo_generator(sketch)
+        pred_fake_sketch = sketch_discriminator(fake_sketch)
+        pred_fake_photo = photo_discriminator(fake_photo)
+
+        # adversarial loss
+        target_fake_sketch = torch.ones(pred_fake_sketch.size(), device=pred_fake_sketch.device)
+        target_fake_photo = torch.ones(pred_fake_photo.size(), device=pred_fake_photo.device)
+        adversarial_loss = adversarial_criterion(pred_fake_sketch, target_fake_sketch) + adversarial_criterion(
+            pred_fake_photo, target_fake_photo)
+        # cycle loss
+        cycle_loss = cycle_criterion(sketch_generator(fake_photo), sketch) + cycle_criterion(
+            photo_generator(fake_sketch), photo)
+
+        generators_loss = adversarial_loss + 10 * cycle_loss
+        generators_loss.backward()
+        optimizer_generator.step()
+        total_generator_loss += generators_loss.item() * sketch.size(0)
+
+        # sketch discriminator #
+        optimizer_sketch_discriminator.zero_grad()
+        pred_real_sketch = sketch_discriminator(sketch)
+        target_real_sketch = torch.ones(pred_real_sketch.size(), device=pred_real_sketch.device)
+        pred_fake_sketch = sketch_discriminator(fake_sketch.detach())
+        target_fake_sketch = torch.zeros(pred_fake_sketch.size(), device=pred_fake_sketch.device)
+        adversarial_loss = (adversarial_criterion(pred_real_sketch, target_real_sketch) + adversarial_criterion(
+            pred_fake_sketch, target_fake_sketch)) / 2
+        adversarial_loss.backward()
+        optimizer_sketch_discriminator.step()
+        total_sketch_discriminator_loss += adversarial_loss.item() * sketch.size(0)
+
+        # photo discriminator #
+        optimizer_photo_discriminator.zero_grad()
+        pred_real_photo = photo_discriminator(photo)
+        target_real_photo = torch.ones(pred_real_photo.size(), device=pred_real_photo.device)
+        pred_fake_photo = photo_discriminator(fake_photo.detach())
+        target_fake_photo = torch.zeros(pred_fake_photo.size(), device=pred_fake_photo.device)
+        adversarial_loss = (adversarial_criterion(pred_real_photo, target_real_photo) + adversarial_criterion(
+            pred_fake_photo, target_fake_photo)) / 2
+        adversarial_loss.backward()
+        optimizer_photo_discriminator.step()
+        total_photo_discriminator_loss += adversarial_loss.item() * photo.size(0)
+
+        # extractor #
         train_optimizer.zero_grad()
+        sketch_real_proj = backbone(sketch)
+        photo_real_proj = backbone(photo)
+        sketch_fake_proj = backbone(fake_sketch.detach())
+        photo_fake_proj = backbone(fake_photo.detach())
+        loss = class_criterion(sketch_real_proj, label) + class_criterion(photo_real_proj, label) + class_criterion(
+            sketch_fake_proj, label) + class_criterion(photo_fake_proj, label)
         loss.backward()
         train_optimizer.step()
-        total_num += sketch.size(0)
-        total_loss += loss.item() * sketch.size(0)
-        train_bar.set_description('Train Epoch: [{}/{}] Loss: {:.4f}'.format(epoch, epochs, total_loss / total_num))
+        total_extractor_loss += loss.item() * sketch.size(0)
 
-    return total_loss / total_num
+        total_num += sketch.size(0)
+
+        e_loss = total_generator_loss / total_num
+        g_loss = total_generator_loss / total_num
+        ds_loss = total_sketch_discriminator_loss / total_num
+        dp_loss = total_photo_discriminator_loss / total_num
+        train_bar.set_description('Train Epoch: [{}/{}] E-Loss: {:.4f} G-Loss: {:.4f} DS-Loss: {:.4f} DP-Loss: {:.4f}'
+                                  .format(epoch, epochs, e_loss, g_loss, ds_loss, dp_loss))
+
+    return e_loss, g_loss, ds_loss, dp_loss
 
 
 # val for one epoch
@@ -147,7 +196,6 @@ if __name__ == '__main__':
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     adversarial_criterion = nn.MSELoss()
     cycle_criterion = nn.L1Loss()
-    identity_criterion = nn.L1Loss()
     # optimizer config
     optimizer_extractor = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
                                                                       'lr': 1e-1}], lr=1e-5, weight_decay=5e-4)
