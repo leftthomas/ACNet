@@ -166,8 +166,8 @@ if __name__ == '__main__':
     parser.add_argument('--backbone_type', default='resnet50', type=str, choices=['resnet50', 'vgg16'],
                         help='Backbone type')
     parser.add_argument('--emb_dim', default=512, type=int, help='Embedding dim')
-    parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
-    parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
+    parser.add_argument('--batch_size', default=32, type=int, help='Number of images in each mini-batch')
+    parser.add_argument('--epochs', default=6, type=int, help='Number of epochs over the model to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     # args parse
@@ -193,7 +193,7 @@ if __name__ == '__main__':
     photo_discriminator.apply(weights_init_normal)
 
     # loss setup
-    class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
+    class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim // 2).cuda()
     adversarial_criterion = nn.MSELoss()
     cycle_criterion = nn.L1Loss()
     # optimizer config
@@ -204,11 +204,11 @@ if __name__ == '__main__':
     optimizer_sketch_discriminator = AdamW(sketch_discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     optimizer_photo_discriminator = AdamW(photo_discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
 
-    lr_scheduler_generator = LambdaLR(optimizer_generator, lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / float(5))
+    lr_scheduler_generator = LambdaLR(optimizer_generator, lr_lambda=lambda eiter: 1.0 - max(0, eiter - 3) / float(3))
     lr_scheduler_sketch_discriminator = LambdaLR(optimizer_sketch_discriminator,
-                                                 lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / float(5))
+                                                 lr_lambda=lambda eiter: 1.0 - max(0, eiter - 3) / float(3))
     lr_scheduler_photo_discriminator = LambdaLR(optimizer_photo_discriminator,
-                                                lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / float(5))
+                                                lr_lambda=lambda eiter: 1.0 - max(0, eiter - 3) / float(3))
     # training loop
     results = {'extractor_loss': [], 'generator_loss': [], 'sketch_discriminator_loss': [],
                'photo_discriminator_loss': [], 'precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
