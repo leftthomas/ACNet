@@ -14,7 +14,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Discriminator, Generator, weights_init_normal
+from model import Extractor, Discriminator, Generator
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -187,10 +187,6 @@ if __name__ == '__main__':
     photo_generator = Generator().cuda()
     sketch_discriminator = Discriminator().cuda()
     photo_discriminator = Discriminator().cuda()
-    sketch_generator.apply(weights_init_normal)
-    photo_generator.apply(weights_init_normal)
-    sketch_discriminator.apply(weights_init_normal)
-    photo_discriminator.apply(weights_init_normal)
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim // 2).cuda()

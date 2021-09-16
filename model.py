@@ -113,10 +113,3 @@ class Extractor(nn.Module):
         feat = torch.flatten(F.adaptive_max_pool2d(feat, (1, 1)), start_dim=1)
         out = self.fc(feat)
         return F.normalize(out, dim=-1)
-
-
-def weights_init_normal(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight, 0.0, 0.02)
-        nn.init.constant_(m.bias, 0.0)
