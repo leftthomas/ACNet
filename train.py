@@ -194,7 +194,7 @@ if __name__ == '__main__':
     cycle_criterion = nn.L1Loss()
     # optimizer config
     optimizer_extractor = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
-                                                                      'lr': 1e-1}], lr=1e-5, weight_decay=5e-4)
+                                                                      'lr': 1e-1}], lr=1e-5)
     optimizer_generator = AdamW(itertools.chain(sketch_generator.parameters(), photo_generator.parameters()),
                                 lr=2e-4, betas=(0.5, 0.999))
     optimizer_sketch_discriminator = AdamW(sketch_discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
