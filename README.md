@@ -62,8 +62,8 @@ optional arguments:
 --data_name                   Dataset name [default value is 'sketchy'](choices=['sketchy', 'tuberlin'])
 --backbone_type               Backbone type [default value is 'resnet50'](choices=['resnet50', 'vgg16'])
 --emb_dim                     Embedding dim [default value is 512]
---batch_size                  Number of images in each mini-batch [default value is 32]
---epochs                      Number of epochs over the model to train [default value is 6]
+--batch_size                  Number of images in each mini-batch [default value is 64]
+--epochs                      Number of epochs over the model to train [default value is 10]
 --save_root                   Result saved root path [default value is 'result']
 ```
 
