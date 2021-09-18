@@ -34,7 +34,7 @@ def train(backbone, data_loader, train_optimizer):
     for sketch, photo, label in train_bar:
         sketch, photo, label = sketch.cuda(), photo.cuda(), label.cuda()
 
-        # generators #
+        # generator #
         optimizer_generator.zero_grad()
         fake = generator(sketch)
         pred_fake = discriminator(fake)
@@ -42,9 +42,21 @@ def train(backbone, data_loader, train_optimizer):
         # generator loss
         target_fake = torch.ones(pred_fake.size(), device=pred_fake.device)
         generators_loss = adversarial_criterion(pred_fake, target_fake)
-        generators_loss.backward()
-        optimizer_generator.step()
         total_generator_loss += generators_loss.item() * sketch.size(0)
+
+        # extractor #
+        train_optimizer.zero_grad()
+        photo_proj = backbone(photo)
+        sketch_proj = backbone(fake)
+
+        # extractor loss
+        class_loss = class_criterion(photo_proj, label) + class_criterion(sketch_proj, label)
+        total_extractor_loss += class_loss.item() * sketch.size(0)
+
+        loss = generators_loss + class_loss
+        loss.backward()
+        train_optimizer.step()
+        optimizer_generator.step()
 
         # discriminator loss #
         optimizer_discriminator.zero_grad()
@@ -52,24 +64,14 @@ def train(backbone, data_loader, train_optimizer):
         target_real = torch.ones(pred_real.size(), device=pred_real.device)
         pred_fake = discriminator(fake.detach())
         target_fake = torch.zeros(pred_fake.size(), device=pred_fake.device)
-        adversarial_loss = (adversarial_criterion(pred_real, target_real) + adversarial_criterion(
-            pred_fake, target_fake)) / 2
+        adversarial_loss = adversarial_criterion(pred_real, target_real) + adversarial_criterion(pred_fake, target_fake)
         adversarial_loss.backward()
         optimizer_discriminator.step()
         total_discriminator_loss += adversarial_loss.item() * photo.size(0)
 
-        # extractor #
-        train_optimizer.zero_grad()
-        photo_proj = backbone(photo)
-        sketch_proj = backbone(fake.detach())
-        loss = class_criterion(photo_proj, label) + class_criterion(sketch_proj, label)
-        loss.backward()
-        train_optimizer.step()
-        total_extractor_loss += loss.item() * sketch.size(0)
-
         total_num += sketch.size(0)
 
-        e_loss = total_generator_loss / total_num
+        e_loss = total_extractor_loss / total_num
         g_loss = total_generator_loss / total_num
         d_loss = total_discriminator_loss / total_num
         train_bar.set_description('Train Epoch: [{}/{}] E-Loss: {:.4f} G-Loss: {:.4f} D-Loss: {:.4f}'
