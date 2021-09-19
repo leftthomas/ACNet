@@ -5,94 +5,84 @@ from torchvision.models import vgg16, resnet50
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_features):
+    def __init__(self, in_channels):
         super(ResidualBlock, self).__init__()
 
-        conv_block = [nn.ReflectionPad2d(1),
-                      nn.Conv2d(in_features, in_features, 3),
-                      nn.InstanceNorm2d(in_features),
-                      nn.ReLU(inplace=True),
-                      nn.ReflectionPad2d(1),
-                      nn.Conv2d(in_features, in_features, 3),
-                      nn.InstanceNorm2d(in_features)]
+        conv_block = [nn.ReflectionPad2d(1), nn.Conv2d(in_channels, in_channels, 3), nn.InstanceNorm2d(in_channels),
+                      nn.ReLU(inplace=True), nn.ReflectionPad2d(1), nn.Conv2d(in_channels, in_channels, 3),
+                      nn.InstanceNorm2d(in_channels)]
 
-        self.conv_block = nn.Sequential(*conv_block)
+        self.conv = nn.Sequential(*conv_block)
 
     def forward(self, x):
-        return x + self.conv_block(x)
+        return x + self.conv(x)
 
 
 class Generator(nn.Module):
-    def __init__(self, n_residual_blocks=9):
+    def __init__(self, in_channels=32, num_block=9):
         super(Generator, self).__init__()
 
-        # initial convolution block
-        model = [nn.ReflectionPad2d(3),
-                 nn.Conv2d(3, 32, 7),
-                 nn.InstanceNorm2d(32),
-                 nn.ReLU(inplace=True)]
+        # in conv
+        self.in_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(3, 32, 7), nn.InstanceNorm2d(32),
+                                     nn.ReLU(inplace=True))
 
-        # down sampling
-        in_features = 32
-        out_features = in_features * 2
+        # down sample
+        down_sample = []
         for _ in range(2):
-            model += [nn.Conv2d(in_features, out_features, 3, stride=2, padding=1),
-                      nn.InstanceNorm2d(out_features),
-                      nn.ReLU(inplace=True)]
-            in_features = out_features
-            out_features = in_features * 2
+            out_channels = in_channels * 2
+            down_sample += [nn.Conv2d(in_channels, out_channels, 3, stride=2, padding=1),
+                            nn.InstanceNorm2d(out_channels), nn.ReLU(inplace=True)]
+            in_channels = out_channels
+        self.down_sample = nn.Sequential(*down_sample)
 
-        # residual blocks
-        for _ in range(n_residual_blocks):
-            model += [ResidualBlock(in_features)]
+        # conv blocks
+        self.convs = nn.Sequential(*[ResidualBlock(in_channels) for _ in range(num_block)])
 
-        # up sampling
-        out_features = in_features // 2
+        # up sample
+        up_sample = []
         for _ in range(2):
-            model += [nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=1, output_padding=1),
-                      nn.InstanceNorm2d(out_features),
-                      nn.ReLU(inplace=True)]
-            in_features = out_features
-            out_features = in_features // 2
+            out_channels = in_channels // 2
+            up_sample += [nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2, padding=1, output_padding=1),
+                          nn.InstanceNorm2d(out_channels), nn.ReLU(inplace=True)]
+            in_channels = out_channels
+        self.up_sample = nn.Sequential(*up_sample)
 
-        # output layer
-        model += [nn.ReflectionPad2d(3),
-                  nn.Conv2d(32, 3, 7),
-                  nn.Tanh()]
-
-        self.model = nn.Sequential(*model)
+        # out conv
+        self.out_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(32, 3, 7), nn.Tanh())
 
     def forward(self, x):
-        return self.model(x)
+        x = self.in_conv(x)
+        x = self.down_sample(x)
+        x = self.convs(x)
+        x = self.up_sample(x)
+        out = self.out_conv(x)
+        return out
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels=32):
         super(Discriminator, self).__init__()
 
-        # a bunch of convolutions one after another
-        model = [nn.Conv2d(3, 32, 4, stride=2, padding=1),
-                 nn.LeakyReLU(0.2, inplace=True)]
+        self.conv1 = nn.Sequential(nn.Conv2d(3, in_channels, 4, stride=2, padding=1), nn.LeakyReLU(0.2, inplace=True))
 
-        model += [nn.Conv2d(32, 64, 4, stride=2, padding=1),
-                  nn.InstanceNorm2d(64),
-                  nn.LeakyReLU(0.2, inplace=True)]
+        self.conv2 = nn.Sequential(nn.Conv2d(in_channels, in_channels * 2, 4, stride=2, padding=1),
+                                   nn.InstanceNorm2d(in_channels * 2), nn.LeakyReLU(0.2, inplace=True))
 
-        model += [nn.Conv2d(64, 128, 4, stride=2, padding=1),
-                  nn.InstanceNorm2d(128),
-                  nn.LeakyReLU(0.2, inplace=True)]
+        self.conv3 = nn.Sequential(nn.Conv2d(in_channels * 2, in_channels * 4, 4, stride=2, padding=1),
+                                   nn.InstanceNorm2d(in_channels * 4), nn.LeakyReLU(0.2, inplace=True))
 
-        model += [nn.Conv2d(128, 256, 4, padding=1),
-                  nn.InstanceNorm2d(256),
-                  nn.LeakyReLU(0.2, inplace=True)]
+        self.conv4 = nn.Sequential(nn.Conv2d(in_channels * 4, in_channels * 8, 4, padding=1),
+                                   nn.InstanceNorm2d(in_channels * 8), nn.LeakyReLU(0.2, inplace=True))
 
-        # FCN classification layer
-        model += [nn.Conv2d(256, 1, 4, padding=1)]
-
-        self.model = nn.Sequential(*model)
+        self.conv5 = nn.Conv2d(in_channels * 8, 1, 4, padding=1)
 
     def forward(self, x):
-        return self.model(x)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        out = self.conv5(x)
+        return out
 
 
 class Extractor(nn.Module):
