@@ -9,7 +9,6 @@ from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
@@ -161,9 +160,6 @@ if __name__ == '__main__':
     optimizer_generator = AdamW(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     optimizer_discriminator = AdamW(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
 
-    lr_scheduler_generator = LambdaLR(optimizer_generator, lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / 5.0)
-    lr_scheduler_discriminator = LambdaLR(optimizer_discriminator,
-                                          lr_lambda=lambda eiter: 1.0 - max(0, eiter - 5) / 5.0)
     # training loop
     results = {'extractor_loss': [], 'generator_loss': [], 'discriminator_loss': [], 'precise': [],
                'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
@@ -178,8 +174,6 @@ if __name__ == '__main__':
         results['discriminator_loss'].append(discriminator_loss)
         precise, features = val(extractor, generator, val_loader)
         results['precise'].append(precise * 100)
-        lr_scheduler_generator.step()
-        lr_scheduler_discriminator.step()
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
         data_frame.to_csv('{}/{}_results.csv'.format(save_root, save_name_pre), index_label='epoch')
