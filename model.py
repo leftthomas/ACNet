@@ -23,8 +23,8 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         # in conv
-        self.in_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(3, 32, 7), nn.InstanceNorm2d(32),
-                                     nn.ReLU(inplace=True))
+        self.in_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(3, in_channels, 7),
+                                     nn.InstanceNorm2d(in_channels), nn.ReLU(inplace=True))
 
         # down sample
         down_sample = []
@@ -41,14 +41,14 @@ class Generator(nn.Module):
         # up sample
         up_sample = []
         for _ in range(2):
-            out_channels = in_channels // 2
-            up_sample += [nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2, padding=1, output_padding=1),
+            out_channels = in_channels * 2
+            up_sample += [nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1), nn.PixelShuffle(2),
                           nn.InstanceNorm2d(out_channels), nn.ReLU(inplace=True)]
-            in_channels = out_channels
+            in_channels //= 2
         self.up_sample = nn.Sequential(*up_sample)
 
         # out conv
-        self.out_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(32, 3, 7), nn.Tanh())
+        self.out_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(in_channels, 3, 7), nn.Tanh())
 
     def forward(self, x):
         x = self.in_conv(x)
