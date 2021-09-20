@@ -8,11 +8,10 @@ class ResidualBlock(nn.Module):
     def __init__(self, in_channels):
         super(ResidualBlock, self).__init__()
 
-        conv_block = [nn.ReflectionPad2d(1), nn.Conv2d(in_channels, in_channels, 3), nn.InstanceNorm2d(in_channels),
-                      nn.ReLU(inplace=True), nn.ReflectionPad2d(1), nn.Conv2d(in_channels, in_channels, 3),
-                      nn.InstanceNorm2d(in_channels)]
-
-        self.conv = nn.Sequential(*conv_block)
+        self.conv = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, padding=1, padding_mode='reflect'),
+                                  nn.InstanceNorm2d(in_channels), nn.ReLU(inplace=True),
+                                  nn.Conv2d(in_channels, in_channels, 3, padding=1, padding_mode='reflect'),
+                                  nn.InstanceNorm2d(in_channels))
 
     def forward(self, x):
         return x + self.conv(x)
@@ -23,7 +22,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
 
         # in conv
-        self.in_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(3, in_channels, 7),
+        self.in_conv = nn.Sequential(nn.Conv2d(3, in_channels, 7, padding=3, padding_mode='reflect'),
                                      nn.InstanceNorm2d(in_channels), nn.ReLU(inplace=True))
 
         # down sample
@@ -48,7 +47,7 @@ class Generator(nn.Module):
         self.up_sample = nn.Sequential(*up_sample)
 
         # out conv
-        self.out_conv = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(in_channels, 3, 7), nn.Tanh())
+        self.out_conv = nn.Sequential(nn.Conv2d(in_channels, 3, 7, padding=3, padding_mode='reflect'), nn.Tanh())
 
     def forward(self, x):
         x = self.in_conv(x)
