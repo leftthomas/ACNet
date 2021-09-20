@@ -148,8 +148,8 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator(in_channels=16).cuda()
-    discriminator = Discriminator(in_channels=16).cuda()
+    generator = Generator(in_channels=8).cuda()
+    discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
