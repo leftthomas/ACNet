@@ -19,7 +19,7 @@ class ResidualBlock(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, in_channels=32, num_block=9):
+    def __init__(self, in_channels=64, num_block=9):
         super(Generator, self).__init__()
 
         # in conv
@@ -60,7 +60,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, in_channels=32):
+    def __init__(self, in_channels=64):
         super(Discriminator, self).__init__()
 
         self.conv1 = nn.Sequential(nn.Conv2d(3, in_channels, 4, stride=2, padding=1), nn.LeakyReLU(0.2, inplace=True))
