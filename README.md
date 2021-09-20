@@ -26,6 +26,12 @@ pip install pytorch-metric-learning
 conda install -c pytorch faiss-cpu
 ```
 
+- [Timm](https://rwightman.github.io/pytorch-image-models/)
+
+```
+pip install timm
+```
+
 ## Dataset
 
 [Sketchy Extended](http://sketchy.eye.gatech.edu) and

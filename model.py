@@ -1,7 +1,6 @@
-import torch
+import timm
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.models import vgg16, resnet50
 
 
 class ResidualBlock(nn.Module):
@@ -89,16 +88,10 @@ class Extractor(nn.Module):
         super(Extractor, self).__init__()
 
         # backbone
-        backbone = resnet50(pretrained=True) if backbone_type == 'resnet50' else vgg16(pretrained=True)
-        extractor = []
-        for name, module in backbone.named_children():
-            if name not in ['avgpool', 'fc', 'classifier']:
-                extractor.append(module)
-        self.backbone = nn.Sequential(*extractor)
-        self.fc = nn.Linear(2048 if backbone_type == 'resnet50' else 512, emb_dim)
+        model_name = 'resnet50' if backbone_type == 'resnet50' else 'vgg16'
+        self.backbone = timm.create_model(model_name, pretrained=True, num_classes=emb_dim, global_pool='max')
 
-    def forward(self, img):
-        feat = self.backbone(img)
-        feat = torch.flatten(F.adaptive_max_pool2d(feat, (1, 1)), start_dim=1)
-        out = self.fc(feat)
-        return F.normalize(out, dim=-1)
+    def forward(self, x):
+        x = self.backbone(x)
+        out = F.normalize(x, dim=-1)
+        return out
