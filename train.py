@@ -8,7 +8,7 @@ import torch
 from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
-from torch.optim import AdamW
+from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
@@ -133,12 +133,13 @@ if __name__ == '__main__':
     parser.add_argument('--emb_dim', default=512, type=int, help='Embedding dim')
     parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
     parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
+    parser.add_argument('--warmup', default=1, type=int, help='Number of warmups over the extractor to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     # args parse
     args = parser.parse_args()
     data_root, data_name, backbone_type, emb_dim = args.data_root, args.data_name, args.backbone_type, args.emb_dim
-    batch_size, epochs, save_root = args.batch_size, args.epochs, args.save_root
+    batch_size, epochs, warmup, save_root = args.batch_size, args.epochs, args.warmup, args.save_root
 
     # data prepare
     train_data = DomainDataset(data_root, data_name, split='train')
@@ -155,10 +156,10 @@ if __name__ == '__main__':
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     adversarial_criterion = nn.MSELoss()
     # optimizer config
-    optimizer_extractor = AdamW([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
-                                                                      'lr': 1e-1}], lr=1e-5)
-    optimizer_generator = AdamW(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
-    optimizer_discriminator = AdamW(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+    optimizer_extractor = Adam([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
+                                                                     'lr': 1e-1}], lr=1e-5)
+    optimizer_generator = Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+    optimizer_discriminator = Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
 
     # training loop
     results = {'extractor_loss': [], 'generator_loss': [], 'discriminator_loss': [], 'precise': [],
@@ -168,6 +169,11 @@ if __name__ == '__main__':
         os.makedirs(save_root)
     best_precise = 0.0
     for epoch in range(1, epochs + 1):
+
+        # warmup, not update the parameters of extractor, except the final fc layer
+        for param in list(extractor.backbone.parameters())[:-2]:
+            param.requires_grad = False if epoch <= warmup else True
+
         extractor_loss, generator_loss, discriminator_loss = train(extractor, train_loader, optimizer_extractor)
         results['extractor_loss'].append(extractor_loss)
         results['generator_loss'].append(generator_loss)
