@@ -12,7 +12,7 @@ from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Discriminator, Generator
+from model import Extractor, Discriminator, Generator, weights_init_normal
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -151,6 +151,8 @@ if __name__ == '__main__':
     extractor = Extractor(backbone_type, emb_dim).cuda()
     generator = Generator(in_channels=8).cuda()
     discriminator = Discriminator(in_channels=8).cuda()
+    generator.apply(weights_init_normal)
+    discriminator.apply(weights_init_normal)
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()

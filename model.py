@@ -95,3 +95,10 @@ class Extractor(nn.Module):
         x = self.backbone(x)
         out = F.normalize(x, dim=-1)
         return out
+
+
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight, 0.0, 0.02)
+        nn.init.constant_(m.bias, 0.0)
