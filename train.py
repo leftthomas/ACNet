@@ -12,7 +12,7 @@ from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Discriminator, Generator, weights_init_normal
+from model import Extractor, Discriminator, Generator
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -132,7 +132,7 @@ if __name__ == '__main__':
                         help='Backbone type')
     parser.add_argument('--emb_dim', default=512, type=int, help='Embedding dim')
     parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
-    parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
+    parser.add_argument('--epochs', default=15, type=int, help='Number of epochs over the model to train')
     parser.add_argument('--warmup', default=1, type=int, help='Number of warmups over the extractor to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
@@ -151,8 +151,6 @@ if __name__ == '__main__':
     extractor = Extractor(backbone_type, emb_dim).cuda()
     generator = Generator(in_channels=8).cuda()
     discriminator = Discriminator(in_channels=8).cuda()
-    generator.apply(weights_init_normal)
-    discriminator.apply(weights_init_normal)
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()

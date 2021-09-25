@@ -41,7 +41,7 @@ class Generator(nn.Module):
         for _ in range(2):
             out_channels = in_channels * 2
             up_sample += [nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1), nn.PixelShuffle(2),
-                          nn.InstanceNorm2d(out_channels), nn.ReLU(inplace=True)]
+                          nn.InstanceNorm2d(in_channels // 2), nn.ReLU(inplace=True)]
             in_channels //= 2
         self.up_sample = nn.Sequential(*up_sample)
 
@@ -96,9 +96,3 @@ class Extractor(nn.Module):
         out = F.normalize(x, dim=-1)
         return out
 
-
-def weights_init_normal(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight, 0.0, 0.02)
-        nn.init.constant_(m.bias, 0.0)
