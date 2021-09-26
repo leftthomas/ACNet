@@ -8,7 +8,7 @@ class ResidualBlock(nn.Module):
         super(ResidualBlock, self).__init__()
 
         self.conv = nn.Sequential(nn.Conv2d(in_channels, in_channels, 3, padding=1, padding_mode='reflect'),
-                                  nn.BatchNorm2d(in_channels), nn.ReLU(inplace=True),
+                                  nn.BatchNorm2d(in_channels), nn.LeakyReLU(0.2, inplace=True),
                                   nn.Conv2d(in_channels, in_channels, 3, padding=1, padding_mode='reflect'),
                                   nn.BatchNorm2d(in_channels))
 
@@ -22,14 +22,14 @@ class Generator(nn.Module):
 
         # in conv
         self.in_conv = nn.Sequential(nn.Conv2d(3, in_channels, 7, padding=3, padding_mode='reflect'),
-                                     nn.BatchNorm2d(in_channels), nn.ReLU(inplace=True))
+                                     nn.BatchNorm2d(in_channels), nn.LeakyReLU(0.2, inplace=True))
 
         # down sample
         down_sample = []
         for _ in range(2):
             out_channels = in_channels * 2
             down_sample += [nn.Conv2d(in_channels, out_channels, 3, stride=2, padding=1),
-                            nn.BatchNorm2d(out_channels), nn.ReLU(inplace=True)]
+                            nn.BatchNorm2d(out_channels), nn.LeakyReLU(0.2, inplace=True)]
             in_channels = out_channels
         self.down_sample = nn.Sequential(*down_sample)
 
@@ -41,7 +41,7 @@ class Generator(nn.Module):
         for _ in range(2):
             out_channels = in_channels * 2
             up_sample += [nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1), nn.PixelShuffle(2),
-                          nn.BatchNorm2d(in_channels // 2), nn.ReLU(inplace=True)]
+                          nn.BatchNorm2d(in_channels // 2), nn.LeakyReLU(0.2, inplace=True)]
             in_channels //= 2
         self.up_sample = nn.Sequential(*up_sample)
 
