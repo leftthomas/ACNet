@@ -9,6 +9,7 @@ from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
 from torch.optim import Adam
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
@@ -132,7 +133,7 @@ if __name__ == '__main__':
                         help='Backbone type')
     parser.add_argument('--emb_dim', default=512, type=int, help='Embedding dim')
     parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
-    parser.add_argument('--epochs', default=15, type=int, help='Number of epochs over the model to train')
+    parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
     parser.add_argument('--warmup', default=1, type=int, help='Number of warmups over the extractor to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
@@ -157,9 +158,13 @@ if __name__ == '__main__':
     adversarial_criterion = nn.MSELoss()
     # optimizer config
     optimizer_extractor = Adam([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
-                                                                     'lr': 1e-1}], lr=1e-5)
+                                                                     'lr': 1e-1}], lr=1e-5, betas=(0.5, 0.999))
     optimizer_generator = Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     optimizer_discriminator = Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+    # lr scheduler
+    lr_scheduler_extractor = StepLR(optimizer_extractor, step_size=epochs // 2, gamma=0.1)
+    lr_scheduler_generator = StepLR(optimizer_generator, step_size=epochs // 2, gamma=0.1)
+    lr_scheduler_discriminator = StepLR(optimizer_discriminator, step_size=epochs // 2, gamma=0.1)
 
     # training loop
     results = {'extractor_loss': [], 'generator_loss': [], 'discriminator_loss': [], 'precise': [],
@@ -183,6 +188,10 @@ if __name__ == '__main__':
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
         data_frame.to_csv('{}/{}_results.csv'.format(save_root, save_name_pre), index_label='epoch')
+
+        lr_scheduler_extractor.step()
+        lr_scheduler_generator.step()
+        lr_scheduler_discriminator.step()
 
         if precise > best_precise:
             best_precise = precise
