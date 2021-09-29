@@ -158,7 +158,7 @@ if __name__ == '__main__':
     adversarial_criterion = nn.MSELoss()
     # optimizer config
     optimizer_extractor = Adam([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
-                                                                     'lr': 1e-1}], lr=1e-5, betas=(0.5, 0.999))
+                                                                     'lr': 1e-3}], lr=1e-5)
     optimizer_generator = Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     optimizer_discriminator = Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     # lr scheduler
