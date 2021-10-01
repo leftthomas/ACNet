@@ -5,11 +5,11 @@ import random
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
 from torch.optim import Adam
-from torch.optim.lr_scheduler import StepLR
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
@@ -46,11 +46,13 @@ def train(backbone, data_loader, train_optimizer):
 
         # extractor #
         train_optimizer.zero_grad()
+        sketch_proj = backbone(sketch)
         photo_proj = backbone(photo)
-        sketch_proj = backbone(fake)
+        fake_proj = backbone(fake)
 
         # extractor loss
-        class_loss = class_criterion(photo_proj, label) + class_criterion(sketch_proj, label)
+        class_loss = (class_criterion(sketch_proj, label) + class_criterion(photo_proj, label) + class_criterion(
+            fake_proj, label)) / 3
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
         loss = generators_loss + class_loss
@@ -60,14 +62,18 @@ def train(backbone, data_loader, train_optimizer):
 
         # discriminator loss #
         optimizer_discriminator.zero_grad()
-        pred_real = discriminator(photo)
-        target_real = torch.ones(pred_real.size(), device=pred_real.device)
+        pred_sketch = discriminator(sketch)
+        target_sketch = torch.zeros(pred_sketch.size(), device=pred_sketch.device)
+        pred_photo = discriminator(photo)
+        target_photo = torch.ones(pred_photo.size(), device=pred_photo.device)
         pred_fake = discriminator(fake.detach())
         target_fake = torch.zeros(pred_fake.size(), device=pred_fake.device)
-        adversarial_loss = adversarial_criterion(pred_real, target_real) + adversarial_criterion(pred_fake, target_fake)
+        adversarial_loss = (adversarial_criterion(pred_sketch, target_sketch) +
+                            adversarial_criterion(pred_photo, target_photo) +
+                            adversarial_criterion(pred_fake, target_fake)) / 3
         adversarial_loss.backward()
         optimizer_discriminator.step()
-        total_discriminator_loss += adversarial_loss.item() * photo.size(0)
+        total_discriminator_loss += adversarial_loss.item() * sketch.size(0)
 
         total_num += sketch.size(0)
 
@@ -93,7 +99,7 @@ def val(backbone, encoder, data_loader):
             if photo.size(0) != 0:
                 photo_emb = backbone(photo)
             if sketch.size(0) != 0:
-                sketch_emb = backbone(encoder(sketch))
+                sketch_emb = F.normalize(backbone(encoder(sketch)) + backbone(sketch), dim=-1)
             if photo.size(0) == 0:
                 emb = sketch_emb
             if sketch.size(0) == 0:
@@ -161,10 +167,6 @@ if __name__ == '__main__':
                                                                      'lr': 1e-3}], lr=1e-5)
     optimizer_generator = Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
     optimizer_discriminator = Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
-    # lr scheduler
-    lr_scheduler_extractor = StepLR(optimizer_extractor, step_size=epochs // 2, gamma=0.1)
-    lr_scheduler_generator = StepLR(optimizer_generator, step_size=epochs // 2, gamma=0.1)
-    lr_scheduler_discriminator = StepLR(optimizer_discriminator, step_size=epochs // 2, gamma=0.1)
 
     # training loop
     results = {'extractor_loss': [], 'generator_loss': [], 'discriminator_loss': [], 'precise': [],
@@ -188,10 +190,6 @@ if __name__ == '__main__':
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
         data_frame.to_csv('{}/{}_results.csv'.format(save_root, save_name_pre), index_label='epoch')
-
-        lr_scheduler_extractor.step()
-        lr_scheduler_generator.step()
-        lr_scheduler_discriminator.step()
 
         if precise > best_precise:
             best_precise = precise
