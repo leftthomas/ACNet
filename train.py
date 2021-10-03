@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator(in_channels=8, num_block=7).cuda()
+    generator = Generator(in_channels=8, num_block=8).cuda()
     discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
