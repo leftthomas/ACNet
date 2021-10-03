@@ -39,10 +39,10 @@ class Generator(nn.Module):
         # up sample
         up_sample = []
         for _ in range(2):
-            out_channels = in_channels * 2
-            up_sample += [nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1), nn.PixelShuffle(2),
-                          nn.InstanceNorm2d(in_channels // 2), nn.ReLU(inplace=True)]
-            in_channels //= 2
+            out_channels = in_channels // 2
+            up_sample += [nn.ConvTranspose2d(in_channels, out_channels, 3, stride=2, padding=1, output_padding=1),
+                          nn.InstanceNorm2d(out_channels), nn.ReLU(inplace=True)]
+            in_channels = out_channels
         self.up_sample = nn.Sequential(*up_sample)
 
         # out conv
