@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator(in_channels=8).cuda()
+    generator = Generator(in_channels=8, num_block=7).cuda()
     discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
@@ -165,8 +165,8 @@ if __name__ == '__main__':
     # optimizer config
     optimizer_extractor = Adam([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
                                                                      'lr': 1e-3}], lr=1e-5)
-    optimizer_generator = Adam(generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
-    optimizer_discriminator = Adam(discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+    optimizer_generator = Adam(generator.parameters(), lr=1e-3, betas=(0.5, 0.999))
+    optimizer_discriminator = Adam(discriminator.parameters(), lr=1e-4, betas=(0.5, 0.999))
 
     # training loop
     results = {'extractor_loss': [], 'generator_loss': [], 'discriminator_loss': [], 'precise': [],
