@@ -187,6 +187,7 @@ if __name__ == '__main__':
         results['discriminator_loss'].append(discriminator_loss)
         precise, features = val(extractor, generator, val_loader)
         results['precise'].append(precise * 100)
+
         # save statistics
         data_frame = pd.DataFrame(data=results, index=range(1, epoch + 1))
         data_frame.to_csv('{}/{}_results.csv'.format(save_root, save_name_pre), index_label='epoch')
