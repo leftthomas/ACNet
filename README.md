@@ -1,7 +1,7 @@
-# MSTP
+# UG
 
-A PyTorch implementation of MSTP based on CVPR 2022 paper
-[Map Sketch to Photo for Zero-Shot Sketch-Based Image Retrieval]().
+A PyTorch implementation of UG based on CVPR 2022 paper
+[Zero-Shot Sketch-Based Image Retrieval with Unidirectional Generator]().
 
 ![Network Architecture](result/structure.png)
 
@@ -83,7 +83,7 @@ optional arguments:
 --data_root                   Datasets root path [default value is '/data']
 --query_name                  Query image name [default value is '/data/sketchy/val/sketch/cow/n01887787_591-14.jpg']
 --data_base                   Queried database [default value is 'result/sketchy_resnet50_2048_vectors.pth']
---num                         Retrieval number [default value is 4]
+--num                         Retrieval number [default value is 10]
 --save_root                   Result saved root path [default value is 'result']
 ```
 
