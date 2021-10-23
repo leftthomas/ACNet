@@ -11,7 +11,7 @@ A PyTorch implementation of UG based on CVPR 2022 paper
 - [PyTorch](https://pytorch.org)
 
 ```
-conda install pytorch=1.9.1 torchvision cudatoolkit -c pytorch
+conda install pytorch=1.10.0 torchvision cudatoolkit=11.3 -c pytorch
 ```
 
 - [Pytorch Metric Learning](https://kevinmusgrave.github.io/pytorch-metric-learning/)

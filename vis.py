@@ -13,7 +13,7 @@ from utils import get_transform
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Vis Generator')
-    parser.add_argument('--sketch_name', default='/data/sketchy/train/sketch/ant', type=str,
+    parser.add_argument('--sketch_name', default='/data/sketchy/train/sketch/cat', type=str,
                         help='Sketch image name')
     parser.add_argument('--generator_name', default='result/sketchy_resnet50_2048_generator.pth', type=str,
                         help='Generator name')

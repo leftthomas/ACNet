@@ -96,16 +96,9 @@ def val(backbone, encoder, data_loader):
             img = img.cuda()
             photo = img[domain == 0]
             sketch = img[domain == 1]
-            if photo.size(0) != 0:
-                photo_emb = backbone(photo)
-            if sketch.size(0) != 0:
-                sketch_emb = F.normalize(backbone(encoder(sketch)) + backbone(sketch), dim=-1)
-            if photo.size(0) == 0:
-                emb = sketch_emb
-            if sketch.size(0) == 0:
-                emb = photo_emb
-            if photo.size(0) != 0 and sketch.size(0) != 0:
-                emb = torch.cat((photo_emb, sketch_emb), dim=0)
+            photo_emb = backbone(photo)
+            sketch_emb = F.normalize(backbone(encoder(sketch)) + backbone(sketch), dim=-1)
+            emb = torch.cat((photo_emb, sketch_emb), dim=0)
             vectors.append(emb.cpu())
             photo_label = label[domain == 0]
             sketch_label = label[domain == 1]
