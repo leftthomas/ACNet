@@ -100,13 +100,9 @@ def val(backbone, encoder, data_loader):
             sketch_emb = F.normalize(backbone(encoder(sketch)) + backbone(sketch), dim=-1)
             emb = torch.cat((photo_emb, sketch_emb), dim=0)
             vectors.append(emb.cpu())
-            photo_label = label[domain == 0]
-            sketch_label = label[domain == 1]
-            label = torch.cat((photo_label, sketch_label), dim=0)
+            label = torch.cat((label[domain == 0], label[domain == 1]), dim=0)
             labels.append(label)
-            photo_domain = domain[domain == 0]
-            sketch_domain = domain[domain == 1]
-            domain = torch.cat((photo_domain, sketch_domain), dim=0)
+            domain = torch.cat((domain[domain == 0], domain[domain == 1]), dim=0)
             domains.append(domain)
         vectors = torch.cat(vectors, dim=0)
         domains = torch.cat(domains, dim=0)
