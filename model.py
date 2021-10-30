@@ -96,3 +96,8 @@ class Extractor(nn.Module):
         out = F.normalize(x, dim=-1)
         return out
 
+
+def set_bn_eval(m):
+    classname = m.__class__.__name__
+    if classname.find('BatchNorm2d') != -1:
+        m.eval()
