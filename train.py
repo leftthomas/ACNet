@@ -5,7 +5,6 @@ import random
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn.functional as F
 from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
 from torch import nn
 from torch.backends import cudnn
@@ -53,13 +52,11 @@ def train(backbone, data_loader):
 
         # extractor #
         optimizer_extractor.zero_grad()
-        sketch_proj = backbone(sketch)
         photo_proj = backbone(photo)
         fake_proj = backbone(fake)
 
         # extractor loss
-        class_loss = (class_criterion(sketch_proj, label) + class_criterion(photo_proj, label) + class_criterion(
-            fake_proj, label)) / 3
+        class_loss = (class_criterion(photo_proj, label) + class_criterion(fake_proj, label)) / 2
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
         class_loss.backward()
@@ -69,15 +66,12 @@ def train(backbone, data_loader):
 
         # discriminator loss #
         optimizer_discriminator.zero_grad()
-        pred_sketch = discriminator(sketch)
-        target_sketch = torch.zeros(pred_sketch.size(), device=pred_sketch.device)
         pred_photo = discriminator(photo)
         target_photo = torch.ones(pred_photo.size(), device=pred_photo.device)
         pred_fake = discriminator(fake.detach())
         target_fake = torch.zeros(pred_fake.size(), device=pred_fake.device)
-        adversarial_loss = (adversarial_criterion(pred_sketch, target_sketch) +
-                            adversarial_criterion(pred_photo, target_photo) +
-                            adversarial_criterion(pred_fake, target_fake)) / 3
+        adversarial_loss = (adversarial_criterion(pred_photo, target_photo) +
+                            adversarial_criterion(pred_fake, target_fake)) / 2
         adversarial_loss.backward()
         optimizer_discriminator.step()
         total_discriminator_loss += adversarial_loss.item() * sketch.size(0)
@@ -105,7 +99,7 @@ def val(backbone, encoder, data_loader):
             photo = img[domain == 0]
             sketch = img[domain == 1]
             photo_emb = backbone(photo)
-            sketch_emb = F.normalize(backbone(encoder(sketch)) + backbone(sketch), dim=-1)
+            sketch_emb = backbone(encoder(sketch))
             emb = torch.cat((photo_emb, sketch_emb), dim=0)
             vectors.append(emb.cpu())
             label = torch.cat((label[domain == 0], label[domain == 1]), dim=0)
