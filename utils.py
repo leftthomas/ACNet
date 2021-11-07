@@ -3,10 +3,11 @@ import os
 import random
 
 from PIL import Image
-from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator, precision_at_k
 from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
+
+from metric import sake_metric
 
 
 def get_transform(split='train'):
@@ -75,33 +76,18 @@ class DomainDataset(Dataset):
         return len(self.images)
 
 
-class MetricCalculator(AccuracyCalculator):
-    def calculate_precision_at_100(self, knn_labels, query_labels, **kwargs):
-        return precision_at_k(knn_labels, query_labels[:, None], 100, self.avg_of_avgs, self.label_comparison_fn)
-
-    def calculate_precision_at_200(self, knn_labels, query_labels, **kwargs):
-        return precision_at_k(knn_labels, query_labels[:, None], 200, self.avg_of_avgs, self.label_comparison_fn)
-
-    def requires_knn(self):
-        return super().requires_knn() + ["precision_at_100", "precision_at_200"]
-
-
 def compute_metric(vectors, domains, labels):
-    calculator_200 = MetricCalculator(include=['mean_average_precision_at_r'], k=200)
-    calculator_all = MetricCalculator(include=['mean_average_precision', 'precision_at_100', 'precision_at_200'])
     acc = {}
 
-    photo_vectors = vectors[domains == 0]
-    sketch_vectors = vectors[domains == 1]
-    photo_labels = labels[domains == 0]
-    sketch_labels = labels[domains == 1]
-    map_200 = calculator_200.get_accuracy(sketch_vectors, photo_vectors, sketch_labels, photo_labels, False)
-    map_all = calculator_all.get_accuracy(sketch_vectors, photo_vectors, sketch_labels, photo_labels, False)
+    photo_vectors = vectors[domains == 0].numpy()
+    sketch_vectors = vectors[domains == 1].numpy()
+    photo_labels = labels[domains == 0].numpy()
+    sketch_labels = labels[domains == 1].numpy()
+    map_all, p_100 = sake_metric(photo_vectors, photo_labels, sketch_vectors, sketch_labels)
+    map_200, p_200 = sake_metric(photo_vectors, photo_labels, sketch_vectors, sketch_labels,
+                                 {'precision': 200, 'map': 200})
 
-    acc['P@100'] = map_all['precision_at_100']
-    acc['P@200'] = map_all['precision_at_200']
-    acc['mAP@200'] = map_200['mean_average_precision_at_r']
-    acc['mAP@all'] = map_all['mean_average_precision']
+    acc['P@100'], acc['P@200'], acc['mAP@200'], acc['mAP@all'] = p_100, p_200, map_200, map_all
     # the mean value is chosen as the representative of precise
     acc['precise'] = (acc['P@100'] + acc['P@200'] + acc['mAP@200'] + acc['mAP@all']) / 4
     return acc

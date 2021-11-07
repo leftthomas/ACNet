@@ -14,18 +14,6 @@ A PyTorch implementation of UG based on CVPR 2022 paper
 conda install pytorch=1.10.0 torchvision cudatoolkit=11.3 -c pytorch
 ```
 
-- [Pytorch Metric Learning](https://kevinmusgrave.github.io/pytorch-metric-learning/)
-
-```
-pip install pytorch-metric-learning
-```
-
-- [Faiss](https://faiss.ai)
-
-```
-conda install -c pytorch faiss-cpu
-```
-
 - [Timm](https://rwightman.github.io/pytorch-image-models/)
 
 ```
