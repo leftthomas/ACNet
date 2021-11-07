@@ -87,8 +87,8 @@ class MetricCalculator(AccuracyCalculator):
 
 
 def compute_metric(vectors, domains, labels):
-    calculator_200 = MetricCalculator(include=['mean_average_precision', 'precision_at_100', 'precision_at_200'], k=200)
-    calculator_all = MetricCalculator(include=['mean_average_precision'])
+    calculator_200 = MetricCalculator(include=['mean_average_precision_at_r'], k=200)
+    calculator_all = MetricCalculator(include=['mean_average_precision', 'precision_at_100', 'precision_at_200'])
     acc = {}
 
     photo_vectors = vectors[domains == 0]
@@ -98,11 +98,10 @@ def compute_metric(vectors, domains, labels):
     map_200 = calculator_200.get_accuracy(sketch_vectors, photo_vectors, sketch_labels, photo_labels, False)
     map_all = calculator_all.get_accuracy(sketch_vectors, photo_vectors, sketch_labels, photo_labels, False)
 
-    acc['P@100'] = map_200['precision_at_100']
-    acc['P@200'] = map_200['precision_at_200']
-    acc['mAP@200'] = map_200['mean_average_precision']
+    acc['P@100'] = map_all['precision_at_100']
+    acc['P@200'] = map_all['precision_at_200']
+    acc['mAP@200'] = map_200['mean_average_precision_at_r']
     acc['mAP@all'] = map_all['mean_average_precision']
     # the mean value is chosen as the representative of precise
     acc['precise'] = (acc['P@100'] + acc['P@200'] + acc['mAP@200'] + acc['mAP@all']) / 4
     return acc
-
