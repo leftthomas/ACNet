@@ -36,12 +36,12 @@ def train(backbone, data_loader):
 
         # extractor loss
         class_loss = class_criterion(proj, torch.cat((label, label), dim=0))
-        total_extractor_loss += class_loss.item() * sketch.size(0)
+        total_extractor_loss += class_loss.item() * sketch.size(0) * 2
 
         class_loss.backward()
         optimizer_extractor.step()
 
-        total_num += sketch.size(0)
+        total_num += sketch.size(0) * 2
         e_loss = total_extractor_loss / total_num
         train_bar.set_description('Train Epoch: [{}/{}] E-Loss: {:.4f}'.format(epoch, epochs, e_loss))
 
