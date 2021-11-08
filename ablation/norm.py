@@ -32,11 +32,10 @@ def train(backbone, data_loader):
         sketch, photo, label = sketch.cuda(), photo.cuda(), label.cuda()
         # extractor #
         optimizer_extractor.zero_grad()
-        sketch_proj = backbone(sketch)
-        photo_proj = backbone(photo)
+        proj = backbone(torch.cat((sketch, photo), dim=0))
 
         # extractor loss
-        class_loss = (class_criterion(photo_proj, label) + class_criterion(sketch_proj, label)) / 2
+        class_loss = class_criterion(proj, torch.cat((label, label), dim=0))
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
         class_loss.backward()
@@ -56,15 +55,9 @@ def val(backbone, data_loader):
     with torch.no_grad():
         for img, domain, label in tqdm(data_loader, desc='Feature extracting', dynamic_ncols=True):
             img = img.cuda()
-            photo = img[domain == 0]
-            sketch = img[domain == 1]
-            photo_emb = backbone(photo)
-            sketch_emb = backbone(sketch)
-            emb = torch.cat((photo_emb, sketch_emb), dim=0)
+            emb = backbone(img)
             vectors.append(emb.cpu())
-            label = torch.cat((label[domain == 0], label[domain == 1]), dim=0)
             labels.append(label)
-            domain = torch.cat((domain[domain == 0], domain[domain == 1]), dim=0)
             domains.append(domain)
         vectors = torch.cat(vectors, dim=0)
         domains = torch.cat(domains, dim=0)
