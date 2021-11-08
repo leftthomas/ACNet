@@ -91,3 +91,4 @@ def compute_metric(vectors, domains, labels):
     # the mean value is chosen as the representative of precise
     acc['precise'] = (acc['P@100'] + acc['P@200'] + acc['mAP@200'] + acc['mAP@all']) / 4
     return acc
+
