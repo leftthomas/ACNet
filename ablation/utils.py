@@ -1,11 +1,13 @@
 import glob
 import os
+import sys
 
 from PIL import Image
 from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
+sys.path.append('..')
 from metric import sake_metric
 
 
