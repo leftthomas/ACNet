@@ -104,7 +104,7 @@ if __name__ == '__main__':
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
     # optimizer config
     optimizer_extractor = Adam([{'params': extractor.parameters()}, {'params': class_criterion.parameters(),
-                                                                     'lr': 1e-3}], lr=1e-5)
+                                                                     'lr': 1e-4}], lr=1e-4)
 
     # training loop
     results = {'extractor_loss': [], 'precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}

@@ -103,7 +103,7 @@ if __name__ == '__main__':
     # loss setup
     class_criterion = TripletMarginLoss()
     # optimizer config
-    optimizer_extractor = Adam(extractor.parameters(), lr=1e-3)
+    optimizer_extractor = Adam(extractor.parameters(), lr=1e-4)
 
     # training loop
     results = {'extractor_loss': [], 'precise': [], 'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
