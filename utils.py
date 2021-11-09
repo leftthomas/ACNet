@@ -90,31 +90,3 @@ def compute_metric(vectors, domains, labels):
     acc['precise'] = (acc['P@100'] + acc['P@200'] + acc['mAP@200'] + acc['mAP@all']) / 4
     return acc
 
-
-if __name__ == '__main__':
-    import glob
-    import os
-    from tqdm import tqdm
-    import shutil
-
-    olds = sorted(glob.glob('/data/sketchy/*/*/*/*'))
-    image_dict = {}
-    for i in olds:
-        class_name = os.path.dirname(i).split('/')[-1]
-        domain_name = os.path.dirname(i).split('/')[-2]
-        data_name = os.path.dirname(i).split('/')[-3]
-        image_name = os.path.basename(i).split('.')[0]
-        image_dict['{}_{}'.format(class_name, image_name)] = {'data_name': data_name, 'domain_name': domain_name,
-                                                              'class_name': class_name}
-    news = sorted(glob.glob('../CycleGAN/results/sketchy/*/*/*'))
-    for image in tqdm(news):
-        key = os.path.basename(image).split('.')[0][:-5]
-        save_path = '/home/rh/Downloads/sketchy/{}/{}/{}/{}' \
-            .format(image_dict[key]['data_name'], image_dict[key]['domain_name'], image_dict[key]['class_name'],
-                    os.path.basename(image))
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        shutil.copy(image, save_path)
-
-    print(len(olds))
-    news = sorted(glob.glob('/home/rh/Downloads/sketchy/*/*/*/*'))
-    print(len(news))
