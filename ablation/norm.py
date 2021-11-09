@@ -12,9 +12,10 @@ from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
+from utils import DomainDataset, compute_metric
+
 sys.path.append('..')
 from model import Extractor
-from utils import DomainDataset, compute_metric
 
 # for reproducibility
 random.seed(1)
@@ -28,20 +29,20 @@ cudnn.benchmark = False
 def train(backbone, data_loader):
     backbone.train()
     total_extractor_loss, total_num, train_bar = 0.0, 0, tqdm(data_loader, dynamic_ncols=True)
-    for sketch, photo, label in train_bar:
-        sketch, photo, label = sketch.cuda(), photo.cuda(), label.cuda()
+    for img, domain, label in train_bar:
+        img, label = img.cuda(), label.cuda()
         # extractor #
         optimizer_extractor.zero_grad()
-        proj = backbone(torch.cat((sketch, photo), dim=0))
+        proj = backbone(img)
 
         # extractor loss
-        class_loss = class_criterion(proj, torch.cat((label, label), dim=0))
-        total_extractor_loss += class_loss.item() * sketch.size(0) * 2
+        class_loss = class_criterion(proj, label)
+        total_extractor_loss += class_loss.item() * img.size(0)
 
         class_loss.backward()
         optimizer_extractor.step()
 
-        total_num += sketch.size(0) * 2
+        total_num += img.size(0)
         e_loss = total_extractor_loss / total_num
         train_bar.set_description('Train Epoch: [{}/{}] E-Loss: {:.4f}'.format(epoch, epochs, e_loss))
 
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     # data prepare
     train_data = DomainDataset(data_root, data_name, split='train')
     val_data = DomainDataset(data_root, data_name, split='val')
-    train_loader = DataLoader(train_data, batch_size=batch_size // 2, shuffle=True, num_workers=8)
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=8)
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
     # model define

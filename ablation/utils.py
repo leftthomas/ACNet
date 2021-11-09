@@ -1,6 +1,5 @@
 import glob
 import os
-import random
 
 from PIL import Image
 from torch.utils.data.dataset import Dataset
@@ -37,9 +36,7 @@ class DomainDataset(Dataset):
                 pass
             else:
                 images += sketches
-                # only append sketches for train
-                if split == 'val':
-                    images += photos
+                images += photos
         self.images = sorted(images)
         self.transform = get_transform(split)
 
@@ -52,11 +49,6 @@ class DomainDataset(Dataset):
                 self.classes[label] = i
                 i += 1
             self.labels.append(self.classes[label])
-        # store photos for each class to easy sample for sketch in training period
-        if split == 'train':
-            self.refs = {}
-            for key, value in self.classes.items():
-                self.refs[value] = glob.glob(os.path.join(data_root, data_name, split, 'photo', key, '*.jpg'))
 
         self.split = split
 
@@ -64,13 +56,8 @@ class DomainDataset(Dataset):
         img = Image.open(self.images[index])
         img = self.transform(img)
         label = self.labels[index]
-        if self.split == 'val':
-            domain = self.domains[index]
-            return img, domain, label
-        else:
-            ref = Image.open(random.choice(self.refs[label]))
-            ref = self.transform(ref)
-            return img, ref, label
+        domain = self.domains[index]
+        return img, domain, label
 
     def __len__(self):
         return len(self.images)
@@ -91,4 +78,3 @@ def compute_metric(vectors, domains, labels):
     # the mean value is chosen as the representative of precise
     acc['precise'] = (acc['P@100'] + acc['P@200'] + acc['mAP@200'] + acc['mAP@all']) / 4
     return acc
-
