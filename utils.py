@@ -56,7 +56,7 @@ class DomainDataset(Dataset):
         if split == 'train':
             self.refs = {}
             for key, value in self.classes.items():
-                self.refs[value] = glob.glob(os.path.join(data_root, data_name, split, 'photo', key, '*.jpg'))
+                self.refs[value] = sorted(glob.glob(os.path.join(data_root, data_name, split, 'photo', key, '*.jpg')))
 
         self.split = split
 
