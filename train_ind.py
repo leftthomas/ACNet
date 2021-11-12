@@ -147,8 +147,8 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator().cuda()
-    discriminator = Discriminator().cuda()
+    generator = Generator(in_channels=8, num_block=8).cuda()
+    discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
@@ -190,4 +190,5 @@ if __name__ == '__main__':
             torch.save(extractor.state_dict(), '{}/{}_extractor.pth'.format(save_root, save_name_pre))
             torch.save(generator.state_dict(), '{}/{}_generator.pth'.format(save_root, save_name_pre))
             torch.save(discriminator.state_dict(), '{}/{}_discriminator.pth'.format(save_root, save_name_pre))
+            torch.save(class_criterion.state_dict(), '{}/{}_proxies.pth'.format(save_root, save_name_pre))
             torch.save(features, '{}/{}_vectors.pth'.format(save_root, save_name_pre))
