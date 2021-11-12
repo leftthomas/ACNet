@@ -31,8 +31,8 @@ class DomainDataset(Dataset):
 
         images = []
         for classes in os.listdir(os.path.join(data_root, data_name, split, 'sketch')):
-            sketches = glob.glob(os.path.join(data_root, data_name, split, 'sketch', str(classes), '*.jpg'))
-            photos = glob.glob(os.path.join(data_root, data_name, split, 'photo', str(classes), '*.jpg'))
+            sketches = glob.glob(os.path.join(data_root, data_name, split, 'sketch', str(classes), '*_fake.png'))
+            photos = glob.glob(os.path.join(data_root, data_name, split, 'photo', str(classes), '*_real.png'))
             # only consider the classes which photo images >= 400 for tuberlin dataset
             if len(photos) < 400 and data_name == 'tuberlin' and split == 'val':
                 pass
