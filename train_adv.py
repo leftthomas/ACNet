@@ -12,7 +12,7 @@ from torch.optim import Adam
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
-from model import Extractor, Discriminator, Generator
+from model import Extractor, Discriminator, Generator, set_bn_eval
 from utils import DomainDataset, compute_metric
 
 # for reproducibility
@@ -26,6 +26,8 @@ cudnn.benchmark = False
 # train for one epoch
 def train(backbone, data_loader):
     backbone.train()
+    # fix bn on backbone
+    backbone.apply(set_bn_eval)
     generator.train()
     discriminator.train()
     total_extractor_loss, total_generator_loss, total_discriminator_loss = 0.0, 0.0, 0.0
@@ -125,7 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('--emb_dim', default=512, type=int, help='Embedding dim')
     parser.add_argument('--batch_size', default=64, type=int, help='Number of images in each mini-batch')
     parser.add_argument('--epochs', default=10, type=int, help='Number of epochs over the model to train')
-    parser.add_argument('--warmup', default=0, type=int, help='Number of warmups over the extractor to train')
+    parser.add_argument('--warmup', default=1, type=int, help='Number of warmups over the extractor to train')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     # args parse
@@ -141,8 +143,8 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator().cuda()
-    discriminator = Discriminator().cuda()
+    generator = Generator(in_channels=8, num_block=8).cuda()
+    discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
