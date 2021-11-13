@@ -1,4 +1,5 @@
 import timm
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -34,7 +35,8 @@ class Generator(nn.Module):
         self.down_sample = nn.Sequential(*down_sample)
 
         # conv blocks
-        self.convs = nn.Sequential(*[ResidualBlock(in_channels) for _ in range(num_block)])
+        self.convs = nn.Sequential(*[ResidualBlock(in_channels * 2) for _ in range(num_block)])
+        in_channels = in_channels * 2
 
         # up sample
         up_sample = []
@@ -51,7 +53,8 @@ class Generator(nn.Module):
     def forward(self, x):
         x = self.in_conv(x)
         x = self.down_sample(x)
-        x = self.convs(x)
+        z = torch.randn(x.size()[:2])[:, :, None, None].expand_as(x).to(x.device)
+        x = self.convs(torch.cat((x, z), dim=1))
         x = self.up_sample(x)
         out = self.out_conv(x)
         return out
