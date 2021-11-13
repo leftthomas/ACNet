@@ -30,7 +30,7 @@ def train(backbone, data_loader):
     backbone.apply(set_bn_eval)
     generator.train()
     discriminator.train()
-    total_extractor_loss, total_generator_loss, total_proxy_loss, total_discriminator_loss = 0.0, 0.0, 0.0, 0.0
+    total_extractor_loss, total_generator_loss, total_discriminator_loss = 0.0, 0.0, 0.0
     total_num, train_bar = 0, tqdm(data_loader, dynamic_ncols=True)
     for sketch, photo, label in train_bar:
         sketch, photo, label = sketch.cuda(), photo.cuda(), label.cuda()
@@ -48,30 +48,31 @@ def train(backbone, data_loader):
         total_generator_loss += gg_loss.item() * sketch.size(0)
 
         # extractor #
+        sketch_proj = backbone(sketch)
         photo_proj = backbone(photo)
         fake_proj = backbone(fake)
 
         # extractor loss
-        class_loss = (class_criterion(photo_proj, label) + class_criterion(fake_proj, label)) / 2
+        class_loss = (class_criterion(sketch_proj, label) + class_criterion(photo_proj, label)
+                      + class_criterion(fake_proj, label)) / 3
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
-        # proxy loss
-        pp_loss = (class_criterion.W.sum(dim=-1) ** 2).mean()
-        total_proxy_loss += pp_loss.item() * sketch.size(0)
-
-        (gg_loss + pp_loss + class_loss).backward()
+        (gg_loss + class_loss).backward()
 
         optimizer_generator.step()
         optimizer_extractor.step()
 
         # discriminator loss #
         optimizer_discriminator.zero_grad()
+        pred_sketch = discriminator(sketch)
+        target_sketch = torch.zeros(pred_sketch.size(), device=pred_sketch.device)
         pred_photo = discriminator(photo)
         target_photo = torch.ones(pred_photo.size(), device=pred_photo.device)
         pred_fake = discriminator(fake.detach())
         target_fake = torch.zeros(pred_fake.size(), device=pred_fake.device)
-        adversarial_loss = (adversarial_criterion(pred_photo, target_photo) +
-                            adversarial_criterion(pred_fake, target_fake)) / 2
+        adversarial_loss = (adversarial_criterion(pred_sketch, target_sketch) +
+                            adversarial_criterion(pred_photo, target_photo) +
+                            adversarial_criterion(pred_fake, target_fake)) / 3
         total_discriminator_loss += adversarial_loss.item() * sketch.size(0)
 
         adversarial_loss.backward()
@@ -81,12 +82,11 @@ def train(backbone, data_loader):
 
         e_loss = total_extractor_loss / total_num
         g_loss = total_generator_loss / total_num
-        p_loss = total_proxy_loss / total_num
         d_loss = total_discriminator_loss / total_num
-        train_bar.set_description('Train Epoch: [{}/{}] E-Loss: {:.4f} G-Loss: {:.4f} P-Loss: {:.4f} D-Loss: {:.4f}'
-                                  .format(epoch, epochs, e_loss, g_loss, p_loss, d_loss))
+        train_bar.set_description('Train Epoch: [{}/{}] E-Loss: {:.4f} G-Loss: {:.4f} D-Loss: {:.4f}'
+                                  .format(epoch, epochs, e_loss, g_loss, d_loss))
 
-    return e_loss, g_loss, p_loss, d_loss
+    return e_loss, g_loss, d_loss
 
 
 # val for one epoch
@@ -148,8 +148,8 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator().cuda()
-    discriminator = Discriminator().cuda()
+    generator = Generator(in_channels=8, num_block=8).cuda()
+    discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     optimizer_discriminator = Adam(discriminator.parameters(), lr=1e-4, betas=(0.5, 0.999))
 
     # training loop
-    results = {'extractor_loss': [], 'generator_loss': [], 'proxy_loss': [], 'discriminator_loss': [], 'precise': [],
+    results = {'extractor_loss': [], 'generator_loss': [], 'discriminator_loss': [], 'precise': [],
                'P@100': [], 'P@200': [], 'mAP@200': [], 'mAP@all': []}
     save_name_pre = '{}_{}_{}'.format(data_name, backbone_type, emb_dim)
     if not os.path.exists(save_root):
@@ -173,10 +173,9 @@ if __name__ == '__main__':
         for param in list(extractor.backbone.parameters())[:-2]:
             param.requires_grad = False if epoch <= warmup else True
 
-        extractor_loss, generator_loss, proxy_loss, discriminator_loss = train(extractor, train_loader)
+        extractor_loss, generator_loss, discriminator_loss = train(extractor, train_loader)
         results['extractor_loss'].append(extractor_loss)
         results['generator_loss'].append(generator_loss)
-        results['proxy_loss'].append(proxy_loss)
         results['discriminator_loss'].append(discriminator_loss)
         precise, features = val(extractor, generator, val_loader)
         results['precise'].append(precise * 100)
