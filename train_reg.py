@@ -64,15 +64,12 @@ def train(backbone, data_loader):
 
         # discriminator loss #
         optimizer_discriminator.zero_grad()
-        pred_sketch = discriminator(sketch)
-        target_sketch = torch.zeros(pred_sketch.size(), device=pred_sketch.device)
         pred_photo = discriminator(photo)
         target_photo = torch.ones(pred_photo.size(), device=pred_photo.device)
         pred_fake = discriminator(fake.detach())
         target_fake = torch.zeros(pred_fake.size(), device=pred_fake.device)
-        adversarial_loss = (adversarial_criterion(pred_sketch, target_sketch) +
-                            adversarial_criterion(pred_photo, target_photo) +
-                            adversarial_criterion(pred_fake, target_fake)) / 3
+        adversarial_loss = (adversarial_criterion(pred_photo, target_photo) +
+                            adversarial_criterion(pred_fake, target_fake)) / 2
         total_discriminator_loss += adversarial_loss.item() * sketch.size(0)
 
         adversarial_loss.backward()
