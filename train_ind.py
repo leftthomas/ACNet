@@ -58,7 +58,7 @@ def train(backbone, data_loader):
         class_loss = (class_criterion(photo_proj, label) + class_criterion(fake_proj, label)) / 2
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
-        (gg_loss + 5 * ii_loss + class_loss).backward()
+        (gg_loss + ii_loss + class_loss).backward()
 
         optimizer_generator.step()
         optimizer_extractor.step()
@@ -147,8 +147,8 @@ if __name__ == '__main__':
 
     # model define
     extractor = Extractor(backbone_type, emb_dim).cuda()
-    generator = Generator(in_channels=8, num_block=8).cuda()
-    discriminator = Discriminator(in_channels=8).cuda()
+    generator = Generator().cuda()
+    discriminator = Discriminator().cuda()
 
     # loss setup
     class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()

@@ -13,9 +13,9 @@ from utils import get_transform
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Vis Generator')
-    parser.add_argument('--sketch_name', default='/data/sketchy/train/sketch/cat', type=str,
+    parser.add_argument('--sketch_name', default='/data/tuberlin/val/sketch/pear', type=str,
                         help='Sketch image name')
-    parser.add_argument('--generator_name', default='result/sketchy_resnet50_2048_generator.pth', type=str,
+    parser.add_argument('--generator_name', default='result/sketchy_resnet50_512_generator.pth', type=str,
                         help='Generator name')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
