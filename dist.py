@@ -1,11 +1,7 @@
 import glob
 
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import timm
-import torch
-import torch.nn.functional as F
 from PIL import Image
 from sklearn.manifold import TSNE
 from tqdm import tqdm
@@ -20,39 +16,52 @@ def angle_between(p1, p2):
 
 
 if __name__ == '__main__':
-    sketch_paths = glob.glob('/home/rh/Downloads/sketchy/train/sketch/*/*_real.png')
-    photo_paths = glob.glob('/home/rh/Downloads/sketchy/train/photo/*/*_real.png')
+    data_name = 'sketchy'
+    data_root = '/home/rh/Downloads/{}/train'.format(data_name)
+
+    old_paths, new_paths, photo_paths = [], [], []
+    for class_name in sorted(glob.glob('{}/sketch/*'.format(data_root))):
+        class_name = class_name.split('/')[-1]
+        old_paths += sorted(glob.glob('{}/sketch/{}/*_real.png'.format(data_root, class_name)))
+        new_paths += sorted(glob.glob('{}/sketch/{}/*_fake.png'.format(data_root, class_name)))
+        photo_paths += sorted(glob.glob('{}/photo/{}/*_real.png'.format(data_root, class_name)))
     model = timm.create_model('resnet50', pretrained=True, num_classes=0, global_pool='max').cuda()
     model.eval()
     transform = get_transform(split='test')
 
-    ref_emb = np.array([1.0, 0.0])
-    sketches, photos = [], []
-    with torch.no_grad():
-        for sketch_path in tqdm(sketch_paths, desc='processing sketches'):
-            sketch = transform(Image.open(sketch_path)).unsqueeze(dim=0)
-            sketch_emd = F.normalize(model(sketch.cuda()), dim=-1).squeeze(dim=0).cpu()
-            sketches.append(sketch_emd)
-        for photo_path in tqdm(photo_paths, desc='processing photos'):
-            photo = transform(Image.open(photo_path)).unsqueeze(dim=0)
-            photo_emd = F.normalize(model(photo.cuda()), dim=-1).squeeze(dim=0).cpu()
-            photos.append(photo_emd)
-        sketches = torch.stack(sketches, dim=0).numpy()
-        photos = torch.stack(photos, dim=0).numpy()
+    old_sketches, new_sketches, photos = [], [], []
+    for paths, embeds in zip([old_paths, new_paths, photo_paths], [old_sketches, new_sketches, photos]):
+        for path in tqdm(paths, desc='processing data'):
+            emd = np.array(Image.open(path), dtype=np.float32).flatten()
+            embeds.append(emd)
 
-        tsne = TSNE(n_components=2, init='pca', random_state=0)
-        sketches = tsne.fit_transform(sketches)
-        photos = tsne.fit_transform(photos)
+    old_sketches = np.stack(old_sketches)
+    new_sketches = np.stack(new_sketches)
+    photos = np.stack(photos)
 
-        sketch_angs, photo_angs = [], []
-        for sketch in sketches:
-            sketch_ang = angle_between(sketch, ref_emb)
-            sketch_angs.append(sketch_ang)
-        for photo in photos:
-            photo_ang = angle_between(photo, ref_emb)
-            photo_angs.append(photo_ang)
+    tsne = TSNE(n_components=2, init='pca', random_state=0)
+    old_sketches = tsne.fit_transform(old_sketches)
+    new_sketches = tsne.fit_transform(new_sketches)
+    photos = tsne.fit_transform(photos)
 
-        sns.kdeplot(np.array(sketch_angs), shade=True, label='sketch dist.')
-        sns.kdeplot(np.array(photo_angs), shade=True, label='photo dist.')
-        plt.legend()
-        plt.savefig('result/before.pdf')
+    ref = np.array([1.0, 0.0])
+    old_angles, new_angles, photo_angles = [], [], []
+    for point in old_sketches:
+        old_angles.append(angle_between(point, ref))
+    for point in new_sketches:
+        new_angles.append(angle_between(point, ref))
+    for point in photos:
+        photo_angles.append(angle_between(point, ref))
+    old_angles, new_angles, photo_angles = np.array(old_angles), np.array(new_angles), np.array(photo_angles)
+    print(old_angles.mean())
+    print(new_angles.mean())
+    print(photo_angles.mean())
+
+    # embeds = np.concatenate((old_sketches, new_sketches, photos))
+    # x_min, x_max = np.min(embeds, 0), np.max(embeds, 0)
+    # embeds = (embeds - x_min) / (x_max - x_min)
+    # labels = ['old'] * len(old_sketches) + ['new'] * len(new_sketches) + ['photo'] * len(photos)
+    # data = pd.DataFrame({'x': embeds[:, 0].tolist(), 'y': embeds[:, 1].tolist(), 'domain': labels})
+    #
+    # sns.scatterplot(x='x', y='y', hue='domain', palette='Set2', alpha=0.4, data=data)
+    # plt.savefig('result/{}_dist.pdf'.format(data_name), bbox_inches='tight', pad_inches=0.1)
