@@ -26,6 +26,7 @@ def draw_fig(vectors, legends, save_path):
     plt.legend()
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0.1)
+    plt.clf()
 
 
 if __name__ == '__main__':
