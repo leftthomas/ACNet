@@ -18,11 +18,16 @@ from model import Extractor
 from utils import get_transform
 
 
-def draw_fig(vectors, legends, save_path):
+def draw_fig(vectors, legends, save_path, style=None):
     x_min, x_max = np.min(vectors, 0), np.max(vectors, 0)
     vectors = (vectors - x_min) / (x_max - x_min)
-    data = pd.DataFrame({'x': vectors[:, 0].tolist(), 'y': vectors[:, 1].tolist(), 'label': legends})
-    sns.scatterplot(x='x', y='y', hue='label', palette='Set2', data=data)
+    if style is not None:
+        data = pd.DataFrame({'x': vectors[:, 0].tolist(), 'y': vectors[:, 1].tolist(),
+                             'label': legends, 'domain': style})
+        sns.scatterplot(x='x', y='y', hue='label', style='domain', palette='Set2', data=data)
+    else:
+        data = pd.DataFrame({'x': vectors[:, 0].tolist(), 'y': vectors[:, 1].tolist(), 'label': legends})
+        sns.scatterplot(x='x', y='y', hue='label', palette='Set2', data=data)
     plt.legend()
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0.1)
@@ -105,5 +110,7 @@ if __name__ == '__main__':
     sketches = tsne.fit_transform(sketches.numpy())
     photos = tsne.fit_transform(photos.numpy())
 
-    draw_fig(sketches, sketch_labels, '{}/{}_sketch.pdf'.format(save_root, data_name))
-    draw_fig(photos, photo_labels, '{}/{}_photo.pdf'.format(save_root, data_name))
+    embeds = np.concatenate((sketches, photos), axis=0)
+    labels = sketch_labels + photo_labels
+    styles = ['sketch'] * num_class * num_sample + ['photo'] * num_class * num_sample
+    draw_fig(embeds, labels, '{}/{}_emb.pdf'.format(save_root, data_name), styles)
