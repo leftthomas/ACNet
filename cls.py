@@ -68,4 +68,4 @@ if __name__ == '__main__':
     axes[1].set_ylabel('# pairs')
     axes[0].set_ylim(0, 350)
     axes[1].set_ylim(0, 350)
-    plt.savefig('{}/{}_pn.pdf'.format(save_root, data_name), bbox_inches='tight', pad_inches=0.1)
+    plt.savefig('{}/{}_dist.pdf'.format(save_root, data_name), bbox_inches='tight', pad_inches=0.1)
