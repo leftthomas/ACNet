@@ -60,7 +60,7 @@ def train(backbone, data_loader):
                       class_criterion(fake_proj, label)) / 3
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
-        (gg_loss + 0.1 * ii_loss + 10 * class_loss).backward()
+        (gg_loss + 0.1 * ii_loss + class_loss).backward()
 
         optimizer_generator.step()
         optimizer_extractor.step()
