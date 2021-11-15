@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_root', default='/data', type=str, help='Datasets root path')
     parser.add_argument('--data_name', default='sketchy', type=str, choices=['sketchy', 'tuberlin'],
                         help='Dataset name')
-    parser.add_argument('--num_sample', default=100, type=int, help='Vis sample number')
+    parser.add_argument('--num_sample', default=50, type=int, help='Vis sample number')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     args = parser.parse_args()
