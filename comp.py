@@ -15,15 +15,21 @@ from model import Extractor
 from utils import get_transform
 
 
-def draw_fig(vectors, legends, style, ax, legend_on=False):
+def draw_fig(vectors, legends, style, ax, text, legend_on=False):
     x_min, x_max = np.min(vectors, 0), np.max(vectors, 0)
     vectors = (vectors - x_min) / (x_max - x_min)
-    data = pd.DataFrame({'x': vectors[:, 0].tolist(), 'y': vectors[:, 1].tolist(), 'label': legends, 'domain': style})
+    data = pd.DataFrame({'x': vectors[:, 0].tolist(), 'y': vectors[:, 1].tolist(), '_label': legends, '_domain': style})
     if legend_on:
-        sns.scatterplot(x='x', y='y', hue='label', style='domain', palette='Set2', data=data, ax=ax)
-        ax.legend(loc=2, bbox_to_anchor=(1.05, 1.0), borderaxespad=0.)
+        sns.scatterplot(x='x', y='y', hue='_label', style='_domain', data=data, ax=ax)
+        current_handles, current_labels = ax.get_legend_handles_labels()
+        class_handles, class_labels = current_handles[:-2], current_labels[:-2]
+        domain_handles, domain_labels = current_handles[-2:], current_labels[-2:]
+        legend = ax.legend(domain_handles, domain_labels, loc=2, bbox_to_anchor=(1.05, 0.2), borderaxespad=0.)
+        ax.legend(class_handles, class_labels, loc=2, bbox_to_anchor=(1.05, 1.0), borderaxespad=0., edgecolor='black')
+        ax.add_artist(legend)
     else:
-        sns.scatterplot(x='x', y='y', hue='label', style='domain', palette='Set2', data=data, ax=ax, legend=False)
+        sns.scatterplot(x='x', y='y', hue='_label', style='_domain', data=data, ax=ax, legend=False)
+    ax.text(0.67, 0.95, text, fontsize=12)
     ax.set(xlabel=None)
     ax.set(ylabel=None)
 
@@ -145,13 +151,13 @@ if __name__ == '__main__':
     styles = ['sketch'] * num_class * num_sample + ['photo'] * num_class * num_sample
 
     fig, axes = plt.subplots(1, 4, figsize=(22, 4))
-    axes[0].set_title(r'$\mathcal{L}_{triplet}$ without synthesize')
-    axes[1].set_title(r'$\mathcal{L}_{triplet}$ with synthesize')
-    axes[2].set_title(r'$\mathcal{L}_{norm}$ without synthesize')
-    axes[3].set_title(r'$\mathcal{L}_{norm}$ with synthesize')
+    axes[0].set_title(r'$\mathcal{L}_{triplet}$', fontsize=18)
+    axes[1].set_title(r'$\mathcal{L}_{triplet}$', fontsize=18)
+    axes[2].set_title(r'$\mathcal{L}_{norm}$', fontsize=18)
+    axes[3].set_title(r'$\mathcal{L}_{norm}$', fontsize=18)
 
-    draw_fig(triplet_embeds, labels, styles, axes[0])
-    draw_fig(triplet_gan_embeds, gan_labels, styles, axes[1])
-    draw_fig(norm_embeds, labels, styles, axes[2])
-    draw_fig(norm_gan_embeds, gan_labels, styles, axes[3], legend_on=True)
+    draw_fig(triplet_embeds, labels, styles, axes[0], 'w/o synthesis')
+    draw_fig(triplet_gan_embeds, gan_labels, styles, axes[1], 'w/ synthesis')
+    draw_fig(norm_embeds, labels, styles, axes[2], 'w/o synthesis')
+    draw_fig(norm_gan_embeds, gan_labels, styles, axes[3], 'w/ synthesis', legend_on=True)
     plt.savefig('{}/{}_emb.pdf'.format(save_root, data_name), bbox_inches='tight', pad_inches=0.1)
