@@ -31,7 +31,10 @@ def draw_fig(vectors, legends, style, ax, text, legend_on=False):
         ax.add_artist(legend)
     else:
         sns.scatterplot(x='x', y='y', hue='_label', style='_domain', data=data, ax=ax, legend=False)
-    ax.text(0.7, 0.97, text, fontsize=12)
+    if text == 'two-stage training':
+        ax.text(0.56, 0.97, text, fontsize=12)
+    else:
+        ax.text(0.7, 0.97, text, fontsize=12)
     ax.set(xlabel=None)
     ax.set(ylabel=None)
 
@@ -120,6 +123,6 @@ if __name__ == '__main__':
     axes[0].set_title(r'$\mathcal{L}_{norm}$', fontsize=18)
     axes[1].set_title(r'$\mathcal{L}_{norm}$', fontsize=18)
 
-    draw_fig(norm_gan_embeds, labels, styles, axes[0], 'w/ synthesis')
+    draw_fig(norm_gan_embeds, labels, styles, axes[0], 'two-stage training')
     draw_fig(our_embeds, labels, styles, axes[1], 'joint-training', legend_on=True)
     plt.savefig('{}/{}_ours_emb.pdf'.format(save_root, data_name), bbox_inches='tight', pad_inches=0.1)
