@@ -12,9 +12,9 @@ if __name__ == '__main__':
     parser.add_argument('--data_root', default='/data', type=str, help='Datasets root path')
     parser.add_argument('--query_name', default='/data/sketchy/val/sketch/cow/n01887787_591-14.jpg', type=str,
                         help='Query image name')
-    parser.add_argument('--data_base', default='result/sketchy_resnet50_2048_vectors.pth', type=str,
+    parser.add_argument('--data_base', default='result/sketchy_resnet50_512_vectors.pth', type=str,
                         help='Queried database')
-    parser.add_argument('--num', default=10, type=int, help='Retrieval number')
+    parser.add_argument('--num', default=5, type=int, help='Retrieval number')
     parser.add_argument('--save_root', default='result', type=str, help='Result saved root path')
 
     opt = parser.parse_args()
