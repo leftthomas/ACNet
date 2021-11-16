@@ -16,7 +16,7 @@ from model import Extractor
 from utils import get_transform
 
 
-def draw_fig(vectors, legends, style, ax, text, legend_on=False):
+def draw_fig(vectors, legends, style, ax, text, x_label, legend_on=False):
     x_min, x_max = np.min(vectors, 0), np.max(vectors, 0)
     vectors = (vectors - x_min) / (x_max - x_min)
     data = pd.DataFrame({'x': vectors[:, 0].tolist(), 'y': vectors[:, 1].tolist(), '_label': legends, '_domain': style})
@@ -30,8 +30,8 @@ def draw_fig(vectors, legends, style, ax, text, legend_on=False):
         ax.add_artist(legend)
     else:
         sns.scatterplot(x='x', y='y', hue='_label', style='_domain', data=data, ax=ax, legend=False)
-    ax.text(0.7, 0.97, text, fontsize=12)
-    ax.set(xlabel=None)
+    ax.text(0.0, 0.97, text, fontsize=12)
+    ax.set_xlabel(x_label, fontsize=12)
     ax.set(ylabel=None)
 
 
@@ -176,9 +176,9 @@ if __name__ == '__main__':
     axes[3].set_title(r'$\mathcal{L}_{norm}$', fontsize=18)
     axes[4].set_title(r'$\mathcal{L}_{norm}$', fontsize=18)
 
-    draw_fig(triplet_embeds, labels, styles, axes[0], 'w/o synthesis')
-    draw_fig(triplet_gan_embeds, labels, styles, axes[1], 'w/ synthesis')
-    draw_fig(norm_embeds, labels, styles, axes[2], 'w/o synthesis')
-    draw_fig(norm_gan_embeds, labels, styles, axes[3], 'w/ synthesis')
-    draw_fig(our_embeds, labels, styles, axes[4], 'joint-training', legend_on=True)
+    draw_fig(triplet_embeds, labels, styles, axes[0], 'w/o synthesis', '(a)')
+    draw_fig(triplet_gan_embeds, labels, styles, axes[1], 'w/ synthesis', '(b)')
+    draw_fig(norm_embeds, labels, styles, axes[2], 'w/o synthesis', '(c)')
+    draw_fig(norm_gan_embeds, labels, styles, axes[3], 'w/ synthesis', '(d)')
+    draw_fig(our_embeds, labels, styles, axes[4], 'joint-training', '(e)', legend_on=True)
     plt.savefig('{}/{}_emb.pdf'.format(save_root, data_name), bbox_inches='tight', pad_inches=0.1)
