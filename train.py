@@ -153,7 +153,7 @@ if __name__ == '__main__':
     discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
-    class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
+    class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim, temperature=0.03).cuda()
     adversarial_criterion = nn.MSELoss()
     identity_criterion = nn.L1Loss()
     # optimizer config
