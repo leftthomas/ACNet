@@ -1,7 +1,7 @@
-# UG
+# ACNet
 
-A PyTorch implementation of UG based on CVPR 2022 paper
-[Zero-Shot Sketch-Based Image Retrieval with Unidirectional Generator]().
+A PyTorch implementation of ACNet based on CVPR 2022 paper
+[ACNet: Approaching-and-Centralizing Network for Zero-Shot Sketch-Based Image Retrieval]().
 
 ![Network Architecture](result/structure.png)
 
@@ -70,8 +70,8 @@ python test.py --num 8
 optional arguments:
 --data_root                   Datasets root path [default value is '/data']
 --query_name                  Query image name [default value is '/data/sketchy/val/sketch/cow/n01887787_591-14.jpg']
---data_base                   Queried database [default value is 'result/sketchy_resnet50_2048_vectors.pth']
---num                         Retrieval number [default value is 10]
+--data_base                   Queried database [default value is 'result/sketchy_resnet50_512_vectors.pth']
+--num                         Retrieval number [default value is 5]
 --save_root                   Result saved root path [default value is 'result']
 ```
 
@@ -104,80 +104,80 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
   <tr>
     <td align="center">VGG16</td>
     <td align="center">64</td>
-    <td align="center">53.0</td>
+    <td align="center">32.6</td>
     <td align="center">38.0</td>
-    <td align="center">50.1</td>
-    <td align="center">46.0</td>
-    <td align="center">54.7</td>
-    <td align="center">37.4</td>
-    <td align="center">52.2</td>
-    <td align="center">49.4</td>
-    <td align="center"><a href="https://pan.baidu.com/s/14lJMIRCMJIIM4QrP_Gbqfg">e8db</a></td>
+    <td align="center">48.7</td>
+    <td align="center">44.7</td>
+    <td align="center">39.8</td>
+    <td align="center">37.1</td>
+    <td align="center">50.6</td>
+    <td align="center">48.0</td>
+    <td align="center"><a href="https://mega.nz/folder/bldhGQQC#Mp7WxgtyCdGlE5EiUILWwg">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">VGG16</td>
     <td align="center">512</td>
-    <td align="center">57.5</td>
-    <td align="center">42.6</td>
-    <td align="center">54.6</td>
-    <td align="center">50.6</td>
-    <td align="center">62.3</td>
-    <td align="center">44.6</td>
-    <td align="center">60.1</td>
-    <td align="center">57.1</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1rdyX8S4J7hHrDk33QHip1A">uiv4</a></td>
+    <td align="center">38.3</td>
+    <td align="center">42.2</td>
+    <td align="center">53.3</td>
+    <td align="center">49.3</td>
+    <td align="center">47.2</td>
+    <td align="center">43.9</td>
+    <td align="center">58.1</td>
+    <td align="center">55.3</td>
+    <td align="center"><a href="https://mega.nz/folder/rxdX1C7a#WuX8i9MezO7CrPHHsF69CQ">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">VGG16</td>
     <td align="center">4096</td>
-    <td align="center">58.6</td>
-    <td align="center">44.4</td>
-    <td align="center">56.0</td>
-    <td align="center">51.9</td>
-    <td align="center">64.3</td>
-    <td align="center">47.6</td>
-    <td align="center">62.5</td>
-    <td align="center">59.7</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1z30aDG-ra0owr2P59SnpZA">mb9f</a></td>
+    <td align="center"><b>40.0</b></td>
+    <td align="center"><b>43.2</b></td>
+    <td align="center"><b>54.6</b></td>
+    <td align="center"><b>50.8</b></td>
+    <td align="center"><b>51.7</b></td>
+    <td align="center"><b>47.9</b></td>
+    <td align="center"><b>62.3</b></td>
+    <td align="center"><b>59.3</b></td>
+    <td align="center"><a href="https://mega.nz/folder/7oFHmKQb#Ia7eQaVinoGpf8SrI5QunQ">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">ResNet50</td>
-    <td align="center">128</td>
-    <td align="center">62.6</td>
-    <td align="center">48.7</td>
-    <td align="center">60.4</td>
-    <td align="center">56.4</td>
-    <td align="center">61.2</td>
-    <td align="center">46.2</td>
-    <td align="center">59.4</td>
-    <td align="center">57.6</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1aK2xiSPZRPXuORoH-8-aoQ">c7h4</a></td>
+    <td align="center">64</td>
+    <td align="center">43.0</td>
+    <td align="center">46.0</td>
+    <td align="center">56.8</td>
+    <td align="center">52.7</td>
+    <td align="center">47.5</td>
+    <td align="center">44.9</td>
+    <td align="center">57.2</td>
+    <td align="center">54.9</td>
+    <td align="center"><a href="https://mega.nz/folder/v5M1GYxJ#OTVIsh5jWRk6YTWQQDH_Ng">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">ResNet50</td>
     <td align="center">512</td>
-    <td align="center">66.2</td>
-    <td align="center">53.2</td>
-    <td align="center">63.9</td>
-    <td align="center">60.1</td>
-    <td align="center">64.8</td>
-    <td align="center">50.3</td>
-    <td align="center">63.0</td>
-    <td align="center">61.1</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1N7iYhbj6GBQ3byRPoekFHA">mhmm</a></td>
+    <td align="center"><b>51.7</b></td>
+    <td align="center"><b>55.9</b></td>
+    <td align="center"><b>64.3</b></td>
+    <td align="center"><b>60.8</b></td>
+    <td align="center"><b>57.7</b></td>
+    <td align="center">57.7</td>
+    <td align="center"><b>65.8</b></td>
+    <td align="center"><b>64.4</b></td>
+    <td align="center"><a href="https://mega.nz/folder/nsdnDAbQ#XXvbLQOhfvIiIMmh_4tMkA">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">ResNet50</td>
-    <td align="center">2048</td>
-    <td align="center">66.6</td>
-    <td align="center">53.6</td>
-    <td align="center">64.5</td>
-    <td align="center">60.7</td>
-    <td align="center">65.6</td>
-    <td align="center">53.7</td>
-    <td align="center">64.2</td>
-    <td align="center">62.7</td>
-    <td align="center"><a href="https://pan.baidu.com/s/1unfflapyOiRvqEbYMZH-gg">5vcy</a></td>
+    <td align="center">4096</td>
+    <td align="center">51.1</td>
+    <td align="center">55.7</td>
+    <td align="center">63.8</td>
+    <td align="center">60.0</td>
+    <td align="center">57.3</td>
+    <td align="center"><b>58.6</b></td>
+    <td align="center">64.6</td>
+    <td align="center">63.5</td>
+    <td align="center"><a href="https://mega.nz/folder/WhFTkSIY#wsc6-76F02IzNcfwYzghtg">MEGA</a></td>
   </tr>
 </tbody>
 </table>
