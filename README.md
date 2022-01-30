@@ -112,7 +112,7 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
     <td align="center">37.1</td>
     <td align="center">50.6</td>
     <td align="center">48.0</td>
-    <td align="center"><a href="https://mega.nz/folder/bldhGQQC#Mp7WxgtyCdGlE5EiUILWwg">MEGA</a></td>
+    <td align="center"><a href="https://mega.nz/file/fO53GAbJ#Pa_IXv3u3pv603adES4UR0K3Z44xJ8EnQu3xC0MfQbk">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">VGG16</td>
@@ -125,7 +125,7 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
     <td align="center">43.9</td>
     <td align="center">58.1</td>
     <td align="center">55.3</td>
-    <td align="center"><a href="https://mega.nz/folder/rxdX1C7a#WuX8i9MezO7CrPHHsF69CQ">MEGA</a></td>
+    <td align="center"><a href="https://mega.nz/file/7HgizBpS#_3q6E6V5afuUzdUbYoEG_5qLK9a9Jz8lFm_DXpR-tSo">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">VGG16</td>
@@ -138,7 +138,7 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
     <td align="center"><b>47.9</b></td>
     <td align="center"><b>62.3</b></td>
     <td align="center"><b>59.3</b></td>
-    <td align="center"><a href="https://mega.nz/folder/7oFHmKQb#Ia7eQaVinoGpf8SrI5QunQ">MEGA</a></td>
+    <td align="center"><a href="https://mega.nz/file/7XoAAIJJ#STEnjlFg3Iy3OmFxP6XDvU7oMRnuzh4vO-Ss7AJ_Q14">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">ResNet50</td>
@@ -151,7 +151,7 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
     <td align="center">44.9</td>
     <td align="center">57.2</td>
     <td align="center">54.9</td>
-    <td align="center"><a href="https://mega.nz/folder/v5M1GYxJ#OTVIsh5jWRk6YTWQQDH_Ng">MEGA</a></td>
+    <td align="center"><a href="https://mega.nz/file/nDADgCSQ#7Ov9VM-3w9fgn72r0r5yO7bflW1UOLCS0q5j7j0_Bmc">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">ResNet50</td>
@@ -164,7 +164,7 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
     <td align="center">57.7</td>
     <td align="center"><b>65.8</b></td>
     <td align="center"><b>64.4</b></td>
-    <td align="center"><a href="https://mega.nz/folder/nsdnDAbQ#XXvbLQOhfvIiIMmh_4tMkA">MEGA</a></td>
+    <td align="center"><a href="https://mega.nz/file/OKJTBKYK#QjiPk9M7OM_3oRTbEIn-q_yZbIeFgRlX_wa0uBEwBCQ">MEGA</a></td>
   </tr>
   <tr>
     <td align="center">ResNet50</td>
@@ -177,7 +177,7 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
     <td align="center"><b>58.6</b></td>
     <td align="center">64.6</td>
     <td align="center">63.5</td>
-    <td align="center"><a href="https://mega.nz/folder/WhFTkSIY#wsc6-76F02IzNcfwYzghtg">MEGA</a></td>
+    <td align="center"><a href="https://mega.nz/file/qbxWkSAY#dljUHREcTe3bMltbDXADV-qCm2Ppix-j3Uf7pDnAmJI">MEGA</a></td>
   </tr>
 </tbody>
 </table>
