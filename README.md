@@ -20,6 +20,12 @@ conda install pytorch=1.10.0 torchvision cudatoolkit=11.3 -c pytorch
 pip install timm
 ```
 
+- [Pytorch Metric Learning](https://kevinmusgrave.github.io/pytorch-metric-learning/)
+
+```
+conda install pytorch-metric-learning -c metric-learning -c pytorch
+```
+
 ## Dataset
 
 [Sketchy Extended](http://sketchy.eye.gatech.edu) and
