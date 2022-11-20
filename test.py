@@ -3,10 +3,9 @@ import os
 import shutil
 
 import torch
-from PIL import Image
+from PIL import Image, ImageDraw
 
-from model import Extractor, Generator
-from utils import DomainDataset, get_transform
+from utils import DomainDataset
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test Model')
@@ -25,14 +24,13 @@ if __name__ == '__main__':
 
     vectors = torch.load(data_base)
     val_data = DomainDataset(data_root, data_name, split='val')
-    query_image = Image.open(query_name).convert('RGB').resize((224, 224), resample=Image.BILINEAR)
-    generator = Generator(in_channels=8, num_block=8).cuda()
-    generator.load_state_dict(torch.load('result/sketchy_resnet50_512_generator.pth'))
-    generator.eval()
-    extractor = Extractor(backbone_type='resnet50', emb_dim=512).cuda()
-    extractor.load_state_dict(torch.load('result/sketchy_resnet50_512_extractor.pth'))
-    extractor.eval()
-    query_feature = extractor(get_transform('val')(query_image).unsqueeze(dim=0).cuda()).squeeze(dim=0).cpu()
+
+    if query_name not in val_data.images:
+        raise FileNotFoundError('{} not found'.format(query_name))
+    query_index = val_data.images.index(query_name)
+    query_image = Image.open(query_name).resize((224, 224), resample=Image.BILINEAR)
+    query_label = val_data.labels[query_index]
+    query_feature = vectors[query_index]
 
     gallery_images, gallery_labels = [], []
     for i, domain in enumerate(val_data.domains):
@@ -51,5 +49,12 @@ if __name__ == '__main__':
     query_image.save('{}/query.jpg'.format(result_path))
     for num, index in enumerate(idx):
         retrieval_image = Image.open(gallery_images[index.item()]).resize((224, 224), resample=Image.BILINEAR)
+        draw = ImageDraw.Draw(retrieval_image)
+        retrieval_label = gallery_labels[index.item()]
+        retrieval_status = retrieval_label == query_label
         retrieval_sim = sim_matrix[index.item()].item()
+        if retrieval_status:
+            draw.rectangle((0, 0, 223, 223), outline='green', width=8)
+        else:
+            draw.rectangle((0, 0, 223, 223), outline='red', width=8)
         retrieval_image.save('{}/retrieval_{}_{}.jpg'.format(result_path, num + 1, '%.4f' % retrieval_sim))
