@@ -1,5 +1,6 @@
 import timm
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ResidualBlock(nn.Module):
@@ -83,19 +84,17 @@ class Discriminator(nn.Module):
 
 
 class Extractor(nn.Module):
-    def __init__(self, backbone_type, emb_dim, num_classes):
+    def __init__(self, backbone_type, emb_dim):
         super(Extractor, self).__init__()
 
         # backbone
         model_name = 'resnet50' if backbone_type == 'resnet50' else 'vgg16'
         self.backbone = timm.create_model(model_name, pretrained=True, num_classes=emb_dim, global_pool='max')
-        self.fc = nn.Linear(emb_dim, num_classes)
 
     def forward(self, x):
         x = self.backbone(x)
-        out = self.fc(x)
-        # out = F.normalize(x, dim=-1)
-        return x, out
+        out = F.normalize(x, dim=-1)
+        return out
 
 
 def set_bn_eval(m):
