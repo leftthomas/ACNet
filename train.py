@@ -5,7 +5,7 @@ import random
 import numpy as np
 import pandas as pd
 import torch
-from pytorch_metric_learning.losses import NormalizedSoftmaxLoss
+import torch.nn.functional as F
 from torch import nn
 from torch.backends import cudnn
 from torch.optim import Adam
@@ -51,13 +51,13 @@ def train(backbone, data_loader):
         total_identity_loss += ii_loss.item() * sketch.size(0)
 
         # extractor #
-        sketch_proj = backbone(sketch)
-        photo_proj = backbone(photo)
-        fake_proj = backbone(fake)
+        sketch_proj, class_sketch = backbone(sketch)
+        photo_proj, class_photo = backbone(photo)
+        fake_proj, class_fake = backbone(fake)
 
         # extractor loss
-        class_loss = (class_criterion(sketch_proj, label) + class_criterion(photo_proj, label) +
-                      class_criterion(fake_proj, label)) / 3
+        class_loss = (class_criterion(class_sketch, label) + class_criterion(class_photo, label) +
+                      class_criterion(class_fake, label)) / 3
         total_extractor_loss += class_loss.item() * sketch.size(0)
 
         (gg_loss + 0.1 * ii_loss + 10 * class_loss).backward()
@@ -100,8 +100,10 @@ def val(backbone, encoder, data_loader):
             img = img.cuda()
             photo = img[domain == 0]
             sketch = img[domain == 1]
-            photo_emb = backbone(photo)
-            sketch_emb = backbone(encoder(sketch))
+            photo_emb, _ = backbone(photo)
+            sketch_emb, _ = backbone(encoder(sketch))
+            photo_emb = F.normalize(photo_emb, dim=-1)
+            sketch_emb = F.normalize(sketch_emb, dim=-1)
             emb = torch.cat((photo_emb, sketch_emb), dim=0)
             vectors.append(emb.cpu())
             label = torch.cat((label[domain == 0], label[domain == 1]), dim=0)
@@ -148,12 +150,12 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=8)
 
     # model define
-    extractor = Extractor(backbone_type, emb_dim).cuda()
+    extractor = Extractor(backbone_type, emb_dim, len(train_data.classes)).cuda()
     generator = Generator(in_channels=8, num_block=8).cuda()
     discriminator = Discriminator(in_channels=8).cuda()
 
     # loss setup
-    class_criterion = NormalizedSoftmaxLoss(len(train_data.classes), emb_dim).cuda()
+    class_criterion = nn.CrossEntropyLoss().cuda()
     adversarial_criterion = nn.MSELoss()
     identity_criterion = nn.L1Loss()
     # optimizer config
