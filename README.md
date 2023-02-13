@@ -1,6 +1,6 @@
 # ACNet
 
-A PyTorch implementation of ACNet based on the paper
+A PyTorch implementation of ACNet based on TCSVT 2023 paper
 [ACNet: Approaching-and-Centralizing Network for Zero-Shot Sketch-Based Image Retrieval]().
 
 ![Network Architecture](result/structure.png)
