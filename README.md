@@ -191,3 +191,16 @@ for backbone, `1e-3` for generator and `1e-4` for discriminator. all the hyper-p
 ## Results
 
 ![vis](result/vis.png)
+
+##  Citing ACNet
+
+If you find ACNet helpful, please consider citing:
+```
+@article{ren2023acnet,
+  title={ACNet: Approaching-and-Centralizing Network for Zero-Shot Sketch-Based Image Retrieval},
+  author={Ren, Hao and Zheng, Ziqiang and Wu, Yang and Lu, Hong and Yang, Yang and Shan, Ying and Yeung, Sai-Kit},
+  journal={IEEE Transactions on Circuits and Systems for Video Technology},
+  year={2023},
+  publisher={IEEE}
+}
+```
